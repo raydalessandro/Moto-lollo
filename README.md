@@ -20,18 +20,27 @@ Quando il frontend sarà consolidato:
 │   │   ├── globals.css         # Design tokens + animazioni dal prototipo
 │   │   └── page.tsx            # Monta <AppShell />
 │   ├── components/
-│   │   ├── AppShell.tsx        # Client component: state + routing tra screen
-│   │   ├── nav/                # Header, BottomNav, icone, definizione items
+│   │   ├── AppShell.tsx        # Client component: state pillar+screen+gruppo attivo
+│   │   ├── nav/                # Header, BottomNav (2 righe), pillars config, Icon
 │   │   └── ui/                 # Card, Stat, Chip, SectionLabel, Placeholder
-│   ├── features/               # Una cartella per ciascuna delle 8 aree
-│   │   ├── home/HomeScreen.tsx
-│   │   ├── registra/RegistraScreen.tsx
-│   │   ├── pianifica/PianificaScreen.tsx
-│   │   ├── community/CommunityScreen.tsx
-│   │   ├── garage/GarageScreen.tsx
-│   │   ├── gruppi/GruppiScreen.tsx
-│   │   ├── classifica/ClassificaScreen.tsx
-│   │   └── profilo/ProfiloScreen.tsx
+│   ├── features/               # Una cartella per pillar (io, gruppo, mondo)
+│   │   ├── io/                 # IO · personale
+│   │   │   ├── HomeScreen.tsx
+│   │   │   ├── MappaScreen.tsx
+│   │   │   ├── CreaScreen.tsx
+│   │   │   ├── GarageScreen.tsx
+│   │   │   └── RegistraScreen.tsx   # non in bottom nav, raggiunto da Crea
+│   │   ├── gruppo/             # GRUPPO — contenuto del gruppo attivo
+│   │   │   ├── GruppoHomeScreen.tsx
+│   │   │   ├── PianificaScreen.tsx
+│   │   │   ├── CordataScreen.tsx
+│   │   │   ├── StoriaScreen.tsx
+│   │   │   └── DiarioScreen.tsx
+│   │   └── mondo/              # MONDO · community
+│   │       ├── FeedScreen.tsx
+│   │       ├── EventiScreen.tsx
+│   │       ├── ClassificaScreen.tsx
+│   │       └── ProfiloScreen.tsx
 │   ├── mocks/                  # Dati in-memory (user, bikes, activities, groups)
 │   ├── types/                  # Tipi TypeScript del dominio
 │   └── lib/                    # Utility (cn, formatters, ecc.)
@@ -117,18 +126,46 @@ Il progetto è configurato per funzionare con "zero config":
 
 ---
 
+## Architettura di navigazione: i 3 pillars
+
+Il prototipo ha un'architettura a **3 pillars** che diamo per definitiva (vedi [F-006 in INCONSISTENCIES.md](./docs/INCONSISTENCIES.md)):
+
+- **IO · personale** (accent: ember `#ff6a1f`) — *il tuo cockpit: quando riguarda solo te*
+  - Tabs: `Home · Mappa · Crea · Garage`
+- **GRUPPO** (accent: colore del gruppo attivo) — *il tuo moto club: un mondo chiuso*
+  - Tabs: `Gruppo · Pianifica · Cordata (live) · Storia · Diario`
+  - Selettore gruppo: cambia gruppo, cambia il contenuto di tutte le tab del pillar
+- **MONDO · community** (accent: blu `#6bb0ff`) — *tutti i motociclisti pubblici: esplorazione*
+  - Tabs: `Feed · Eventi · Classifica · Profilo`
+
+Il BottomNav è a **2 righe**: sopra il pillar switcher (segmented control), sotto la tab row che cambia in base al pillar attivo. Cambiare pillar riporta alla default tab del pillar (`io.home`, `gruppo.home`, `mondo.feed`).
+
 ## Stato delle schermate
 
-| Area | Stato | Note |
+### IO · personale
+| Screen | Stato | Note |
 |---|---|---|
-| Home | 🟡 Prima pass | Mostra moto primaria, ultima uscita, prossime uscite di gruppo |
-| Registra | ⚪ Stub | Placeholder con lista funzioni |
-| Pianifica | ⚪ Stub | Placeholder con lista funzioni |
-| Community | ⚪ Stub | Placeholder con lista funzioni |
-| Garage | 🟡 Prima pass | Lista moto con dati reali mock |
-| Gruppi & Eventi | 🟡 Prima pass | Lista gruppi + uscite in bacheca |
-| Classifica | ⚪ Stub | Placeholder con lista funzioni |
-| Profilo | 🟡 Prima pass | Avatar, statistiche aggregate, moto |
+| `io.home` | 🟡 Prima pass | Moto primaria, ultima uscita, prossime uscite |
+| `io.mappa` | ⚪ Stub | Mappa interattiva + POI |
+| `io.crea` | 🟡 Prima pass | Hub azioni: nuova uscita, nuovo percorso, import GPX, aggiungi moto |
+| `io.garage` | 🟡 Prima pass | Lista moto con dati mock |
+
+### GRUPPO
+| Screen | Stato | Note |
+|---|---|---|
+| `gruppo.home` | 🟡 Prima pass | Dashboard del gruppo attivo: crest, prossima uscita, bacheca |
+| `gruppo.pianifica` | ⚪ Stub | Pianifica uscita del gruppo |
+| `gruppo.cordata` | ⚪ Stub | Live session gruppo |
+| `gruppo.storia` | ⚪ Stub | Riepilogo narrativo post-uscita |
+| `gruppo.diario` | ⚪ Stub | Archivio percorsi del gruppo |
+
+### MONDO · community
+| Screen | Stato | Note |
+|---|---|---|
+| `mondo.feed` | ⚪ Stub | Feed community pubblico |
+| `mondo.eventi` | ⚪ Stub | Eventi pubblici (raduni, track day) |
+| `mondo.classifica` | ⚪ Stub | Leaderboard, segmenti, sfide |
+| `mondo.profilo` | 🟡 Prima pass | Identità pubblica, statistiche aggregate |
 
 Legenda: ⚪ stub · 🟡 prima passata · 🟢 completa · 🔵 rifinita
 
@@ -136,13 +173,14 @@ Legenda: ⚪ stub · 🟡 prima passata · 🟢 completa · 🔵 rifinita
 
 ## Roadmap prossimi step
 
-1. Portare il prototipo dal "stub" alla "prima passata" per tutte e 8 le aree, integrando dati mock più ricchi.
-2. Aggiungere `CordataScreen` (live session di gruppo) e `PostRideScreen` (riepilogo dopo una registrazione): sono dentro aree esistenti, non in bottom nav.
-3. Onboarding (3-4 step iniziali, presente nel prototipo).
-4. Rifinitura animazioni (screenFadeIn, crestPulse, avatarRingSpin, cordataFlow: tutti già definiti in `globals.css`, da usare).
-5. Prima revisione con Ray + Lollo, fix basati sul feedback.
-6. Consolidamento dei tipi domain → export in un pacchetto condiviso per il port Flutter.
-7. Allineamento back/front con la spec zip prima di scrivere codice backend reale.
+1. Portare tutte le screen dallo "stub" alla "prima passata" con mock più ricchi.
+2. Onboarding 3-step all'ingresso (mostra i 3 pillars, già scritto nel prototipo).
+3. RegistraScreen fullscreen raggiunta da `io.crea > Nuova uscita`.
+4. PostRide fullscreen al termine di una registrazione, poi entra in Storia del gruppo.
+5. Rifinitura animazioni (`screenFadeIn`, `crestPulse`, `avatarRingSpin`, `cordataFlow`: già nel CSS, da agganciare).
+6. Prima revisione con Ray + Lollo, fix basati sul feedback.
+7. Consolidamento dei tipi domain → export in un pacchetto condiviso per il port Flutter.
+8. Allineamento back/front con la spec zip prima di scrivere codice backend reale.
 
 ---
 

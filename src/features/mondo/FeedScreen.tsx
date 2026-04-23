@@ -1,10 +1,10 @@
 import { Placeholder } from "@/components/ui/Placeholder";
 
-export function CommunityScreen() {
+export function FeedScreen() {
   return (
     <Placeholder
-      title="Community"
-      subtitle="Scoperta percorsi pubblici, feed social, recensioni, follow."
+      title="Feed"
+      subtitle="Il mondo dei motociclisti pubblici. Percorsi, gente che ti ispira, esplorazione."
       bullets={[
         "Feed personale (activity + route di utenti seguiti)",
         "Feed pubblico con filtri (zona, tag, lunghezza)",

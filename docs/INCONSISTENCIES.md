@@ -65,6 +65,30 @@ Le incongruenze vengono scoperte man mano che costruiamo il frontend. Quando tro
 
 ---
 
+## [F-006] Architettura navigazione: 3 pillars vs 8 aree flat
+
+- **status:** resolved · seguiamo il prototipo (3 pillars)
+- **area:** information architecture
+- **fonti:**
+  - Excel → 8 aree applicative come pari-livello (HOME, REGISTRA, PIANIFICA, COMMUNITY, GARAGE, GRUPPI & EVENTI, CLASSIFICA, PROFILO).
+  - Prototipo → 3 pillar (IO · personale / GRUPPO / MONDO · community) con tabs DIVERSE per ciascun pillar. Onboarding 3-step del prototipo (riga 4217 di `_refs/prototype/app3.jsx`) spiega esattamente la logica:
+    - *"IO — Il tuo cockpit personale — registra uscite, pianifica percorsi, segui il tuo garage. Quando riguarda solo te."*
+    - *"GRUPPO — Il tuo moto club. Uscite condivise, cordata live quando siete in strada, storie post-ride. Un mondo chiuso."*
+    - *"MONDO — Tutti i motociclisti pubblici. Percorsi nuovi, gente che ti ispira, eventi aperti. Esplorazione."*
+- **impatto frontend:** con 8 tab flat l'UI diventa illeggibile. Con 3 pillar ogni spazio ha uno scopo preciso: personale, branco, mondo. Il mapping delle 8 aree Excel sui 3 pillar prototipo è:
+  - IO: **Home**, Mappa, Crea *(hub: inizia una Registra, un Percorso, importa GPX, aggiungi Moto)*, **Garage**
+  - GRUPPO: Gruppo (home del gruppo attivo), **Pianifica** *(pianificazione uscita gruppo)*, Cordata *(live session)*, Storia *(post-ride)*, Diario *(archivio)*
+  - MONDO: Feed *(ex Community)*, Eventi, **Classifica**, **Profilo**
+- **differenze che questa riorganizzazione introduce:**
+  - **REGISTRA** sparisce come tab a sé. Diventa subscreen di `io.crea` (azione "Nuova uscita"). Durante una registrazione attiva andrà in fullscreen.
+  - **COMMUNITY** diventa `mondo.feed` (il pillar è il contenitore, "Feed" è la pagina dentro).
+  - **GRUPPI & EVENTI** si scinde: "Gruppi" diventa un intero pillar con 5 tab; "Eventi" vive dentro MONDO come calendario pubblico.
+  - **PROFILO** vive dentro MONDO: è l'identità pubblica, non un tab delle impostazioni personali. Impostazioni / privacy vivranno dentro Profilo.
+  - "Pianifica" sotto GRUPPO vuol dire "pianifica un'uscita del gruppo"; la creazione di un percorso personale sta dentro `io.crea` come azione distinta.
+- **decisione:** adottato pattern prototipo. Le 8 aree Excel restano il modello funzionale (cosa l'app deve saper fare), ma la navigazione segue il modello 3-pillar.
+
+---
+
 ## [F-005] Cordata live: concetto UX solo prototipo
 
 - **status:** open
