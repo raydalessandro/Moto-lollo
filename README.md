@@ -2,7 +2,7 @@
 
 Prototipo frontend dell'app moto, scritto in **Next.js 16 + React 19 + TypeScript + Tailwind 4**.
 
-L'obiettivo di questa fase è **costruire l'esperienza utente** delle 8 aree dell'app usando dati mock in memoria. Niente backend reale, niente navigazione reale tra pagine — solo UI, interazione, e tutte le sensazioni dell'app funzionante.
+Fase attuale: **costruire l'esperienza utente** delle 8 aree dell'app usando un DB mock in memoria con dati realistici. Niente backend reale, niente navigazione reale tra URL — solo UI, interazione, e tutte le sensazioni dell'app funzionante.
 
 Quando il frontend sarà consolidato:
 1. Allineeremo le spec back-end alla realtà UX costruita qui.
@@ -14,23 +14,23 @@ Quando il frontend sarà consolidato:
 
 ```
 .
-├── src/                        # Next.js app (codice prodotto)
+├── src/
 │   ├── app/
 │   │   ├── layout.tsx          # Root layout + font (Archivo, JetBrains Mono)
 │   │   ├── globals.css         # Design tokens + animazioni dal prototipo
-│   │   └── page.tsx            # Monta <AppShell />
+│   │   └── page.tsx            # <DbProvider><AppShell /></DbProvider>
 │   ├── components/
-│   │   ├── AppShell.tsx        # Client component: state pillar+screen+gruppo attivo
+│   │   ├── AppShell.tsx        # state pillar+screen+gruppo attivo, group selector
 │   │   ├── nav/                # Header, BottomNav (2 righe), pillars config, Icon
 │   │   └── ui/                 # Card, Stat, Chip, SectionLabel, Placeholder
-│   ├── features/               # Una cartella per pillar (io, gruppo, mondo)
+│   ├── features/
 │   │   ├── io/                 # IO · personale
 │   │   │   ├── HomeScreen.tsx
 │   │   │   ├── MappaScreen.tsx
 │   │   │   ├── CreaScreen.tsx
 │   │   │   ├── GarageScreen.tsx
-│   │   │   └── RegistraScreen.tsx   # non in bottom nav, raggiunto da Crea
-│   │   ├── gruppo/             # GRUPPO — contenuto del gruppo attivo
+│   │   │   └── RegistraScreen.tsx   # non in bottom nav, futura fullscreen
+│   │   ├── gruppo/             # GRUPPO — contesto del gruppo attivo
 │   │   │   ├── GruppoHomeScreen.tsx
 │   │   │   ├── PianificaScreen.tsx
 │   │   │   ├── CordataScreen.tsx
@@ -41,149 +41,229 @@ Quando il frontend sarà consolidato:
 │   │       ├── EventiScreen.tsx
 │   │       ├── ClassificaScreen.tsx
 │   │       └── ProfiloScreen.tsx
-│   ├── mocks/                  # Dati in-memory (user, bikes, activities, groups)
-│   ├── types/                  # Tipi TypeScript del dominio
-│   └── lib/                    # Utility (cn, formatters, ecc.)
+│   ├── mocks/                  # In-memory DB (vedi sezione Data layer)
+│   │   ├── rng.ts              # PRNG deterministico (mulberry32)
+│   │   ├── seed/               # Seed per area (people, garage, rides, gruppi, mondo)
+│   │   ├── db.ts               # Composizione tabelle → Db tipato + singleton
+│   │   ├── queries.ts          # Accessor functions (SELECT)
+│   │   └── DbProvider.tsx      # Context React + useQuery + mutations
+│   ├── types/
+│   │   └── domain.ts           # Tipi TS del dominio (single source of truth)
+│   └── lib/cn.ts               # Utility classnames
 │
 ├── docs/
-│   ├── INCONSISTENCIES.md      # Divergenze tra Excel, specs zip, prototipo
+│   ├── INCONSISTENCIES.md      # Divergenze tra Excel / spec zip / prototipo
 │   └── sources/                # Fonti immutabili (input del progetto)
-│       ├── spec.xlsx           # Excel: fonte più aggiornata per le funzioni
-│       ├── prototype.html      # HTML-redesign: fonte visuale e di UX
-│       └── spec_bundle.zip     # Spec tecniche back/data model (in Markdown)
+│       ├── spec.xlsx           # Excel: funzioni — ultimo in ordine cronologico
+│       ├── prototype.html      # HTML-redesign: design, palette, animazioni, tono
+│       └── spec_bundle.zip     # Spec tecniche back/data model (markdown)
 │
 ├── _refs/                      # [gitignored] Estrazioni locali delle sources
-│                               #   excel_dump.md, excel_by_sheet/, prototype/
+│                               # excel_dump.md, excel_by_sheet/, prototype/*.jsx
 │
 ├── public/
-├── package.json
-├── tsconfig.json
-├── next.config.ts
-├── postcss.config.mjs
-└── eslint.config.mjs
+├── package.json · tsconfig.json · next.config.ts · postcss.config.mjs · eslint.config.mjs
 ```
 
 ---
 
 ## Le tre fonti di verità
 
-Il progetto si basa su tre documenti. Ognuno ha uno scopo preciso:
-
 | Fonte | File | Cosa rappresenta | Per cosa fa fede |
 |---|---|---|---|
-| **Excel** | `docs/sources/spec.xlsx` | Affinamento funzionale, ultimo in ordine cronologico. 29 fogli, una schermata per area (HOME, REGISTRA, PIANIFICA, COMMUNITY, GARAGE, GRUPPI & EVENTI, CLASSIFICA, PROFILO) + architettura, dati, offline, UI states, test. | **Funzioni** dell'app. |
-| **Prototipo HTML** | `docs/sources/prototype.html` | Mock-up standalone (React + babel in browser) con 15 screen già disegnate, palette, animazioni, simulazione gruppi via localStorage. | **Design** (palette, tipografia, animazioni, layout, tono). |
-| **Spec bundle** | `docs/sources/spec_bundle.zip` | Specifiche tecniche back-end e data model (17 file Markdown): tracking, sync, garage, community, navigation, safety, planning, UI components, data model, DB schema, open questions. | **Modello dati** e flussi tecnici back-end. Solo per segnalare **grosse incoerenze** durante lo sviluppo del front. |
+| **Excel** | `docs/sources/spec.xlsx` | Affinamento funzionale, ultimo in ordine cronologico. 29 fogli (HOME, REGISTRA, PIANIFICA, COMMUNITY, GARAGE, GRUPPI & EVENTI, CLASSIFICA, PROFILO + architettura, dati, offline, UI states, test). | **Funzioni** dell'app. |
+| **Prototipo HTML** | `docs/sources/prototype.html` | Standalone React+Babel con 15 screen disegnate, palette, animazioni, simulazione gruppi via localStorage. | **Design** (palette, tipografia, animazioni, layout, tono). |
+| **Spec bundle** | `docs/sources/spec_bundle.zip` | Spec tecniche back-end e data model (17 markdown): tracking, sync, garage, community, navigation, safety, planning, UI, DB schema, open questions. | **Modello dati** e flussi back. Solo per flaggare incoerenze grosse in [`docs/INCONSISTENCIES.md`](./docs/INCONSISTENCIES.md). |
 
-**Regola:** se Excel e prototipo dicono cose diverse, seguiamo l'Excel (funzioni) + il prototipo (visual). Se le spec back-end dicono cose molto diverse, lo annotiamo in [`docs/INCONSISTENCIES.md`](./docs/INCONSISTENCIES.md) e ne riparliamo prima di scrivere il backend.
+**Regola:** Excel + prototipo per il frontend. Le spec back sono riferimento per il dominio, ma non bloccano il prototipo. Divergenze → annotate in `INCONSISTENCIES.md`.
 
 ---
 
-## Come lavorare
-
-### Sviluppo locale
+## Sviluppo locale
 
 ```bash
 npm install
-npm run dev
+npm run dev       # → http://localhost:3000
+npm run build     # production build
+npm run typecheck # tsc --noEmit
 ```
 
-L'app parte su `http://localhost:3000`. È pensata per essere usata a **viewport mobile** (larghezza max 768 px). Apri gli strumenti dev del browser in modalità mobile per un'esperienza realistica.
+L'app è pensata per viewport **mobile** (larghezza max 768 px). Apri gli strumenti dev del browser in modalità mobile per un'esperienza realistica.
 
-### Deploy su Vercel
+## Deploy su Vercel
 
-Il progetto è configurato per funzionare con "zero config":
+Zero config.
 
 1. Connetti il repo su Vercel.
-2. Branch da pubblicare: `claude/build-frontend-prototype-5MVNF` (o il branch di turno).
+2. Branch di produzione: **`main`**.
 3. Framework: Next.js (auto-detect).
-4. Root directory: `.` (la root del repo).
+4. Root directory: lascia vuota / `./`.
 5. Build command: `npm run build` (default).
-
----
-
-## Principi di lavoro su questo prototipo
-
-1. **Esperienza utente prima di tutto.** Ogni schermata deve *sembrare funzionante*, anche se i dati sono finti. Animazioni, feedback, stati vuoti, stati di caricamento: ci sono.
-
-2. **Mock in-memory, non API.** Niente fetch, niente Supabase, niente backend. Le `mocks/` sono l'unica fonte di dati. Quando un'interazione deve "salvare" qualcosa, lo fa in `useState` o `localStorage`.
-
-3. **Un'area = una feature folder.** Ogni area dell'app vive in `src/features/<area>/`. Stessa convenzione ci aiuterà anche nel port Flutter.
-
-4. **Incongruenze sì, improvvisazioni no.** Se trovi che Excel, prototipo e spec back-end dicono cose diverse: annotalo in `docs/INCONSISTENCIES.md`, non inventare. Decidiamo insieme.
-
-5. **Niente backwards-compatibility ora.** Stiamo prototipando. Se una scelta è sbagliata, la cambiamo e basta.
-
-6. **Commenti solo quando il perché non è ovvio.** I nomi devono bastare.
-
-### Flusso consigliato di costruzione di una schermata
-
-1. Apri il foglio Excel corrispondente (es. `07_HOME`, `11_GARAGE`) — lista funzioni.
-2. Apri l'estratto del prototipo (`_refs/prototype/app3.jsx`) e cerca lo screen corrispondente (es. `HomeScreen`, `GarageScreen`) — ispirazione visuale.
-3. Costruisci il componente React in `src/features/<area>/<Nome>Screen.tsx`, riusando i componenti in `src/components/ui/`.
-4. Usa mock da `src/mocks/`. Se ti serve un nuovo tipo di dato, aggiungilo prima in `src/types/domain.ts` e poi istanzialo nei mocks.
-5. Se trovi una divergenza importante tra le fonti, aprila in `docs/INCONSISTENCIES.md`.
 
 ---
 
 ## Architettura di navigazione: i 3 pillars
 
-Il prototipo ha un'architettura a **3 pillars** che diamo per definitiva (vedi [F-006 in INCONSISTENCIES.md](./docs/INCONSISTENCIES.md)):
+Il prototipo ha un'architettura a **3 pillars** definitiva (vedi [F-006](./docs/INCONSISTENCIES.md)):
 
-- **IO · personale** (accent: ember `#ff6a1f`) — *il tuo cockpit: quando riguarda solo te*
+- **IO · personale** — accent `#ff6a1f` — *il tuo cockpit: quando riguarda solo te*
   - Tabs: `Home · Mappa · Crea · Garage`
-- **GRUPPO** (accent: colore del gruppo attivo) — *il tuo moto club: un mondo chiuso*
+- **GRUPPO** — accent: colore del gruppo attivo — *il tuo moto club: un mondo chiuso*
   - Tabs: `Gruppo · Pianifica · Cordata (live) · Storia · Diario`
-  - Selettore gruppo: cambia gruppo, cambia il contenuto di tutte le tab del pillar
-- **MONDO · community** (accent: blu `#6bb0ff`) — *tutti i motociclisti pubblici: esplorazione*
+  - Selettore gruppo sopra le tab: switcha il gruppo, cambia il contesto di tutte le tab.
+- **MONDO · community** — accent `#6bb0ff` — *tutti i motociclisti pubblici: esplorazione*
   - Tabs: `Feed · Eventi · Classifica · Profilo`
 
-Il BottomNav è a **2 righe**: sopra il pillar switcher (segmented control), sotto la tab row che cambia in base al pillar attivo. Cambiare pillar riporta alla default tab del pillar (`io.home`, `gruppo.home`, `mondo.feed`).
+Il BottomNav è a **2 righe**: sopra il pillar switcher (segmented control con sliding indicator), sotto la tab row che cambia col pillar. Cambiare pillar riporta alla default tab del pillar (`io.home`, `gruppo.home`, `mondo.feed`).
+
+`Registra` **non** è una tab a sé: è un'azione dentro `io.crea`. Durante una registrazione attiva andrà in fullscreen.
+
+---
+
+## Data layer
+
+Il frontend gira su un **DB in-memory deterministico** che assomiglia il più possibile a uno schema SQL reale. Questo serve a due cose: (1) rendere ogni schermata navigabile con dati realistici, (2) cristallizzare lo schema che il back-end dovrà esporre quando allineeremo.
+
+### Tabelle (tutte sotto `src/mocks/db.ts`, tipate in `src/types/domain.ts`)
+
+```
+profiles                      userPreferences
+motorcycles                   maintenanceRecords        documents
+activities                    activityMedia
+plannedRoutes
+groups                        groupMemberships          groupRides          groupRideRSVPs
+publishedRoutes               routeComments             routeLikes          followRelationships
+events                        eventRSVPs
+segments                      segmentAttempts           badges              userBadges          challenges
+safetyContacts                liveSessions
+notifications
+```
+
+### Numerosità seed (deterministico, `makeRng(42)` in `src/mocks/rng.ts`)
+
+| Tabella | Rows |
+|---|---|
+| profiles | 17 (Ray + 16 rider italiani) |
+| motorcycles | 19 (2-3 di Ray + 1 primaria ciascuno per gli altri) |
+| maintenanceRecords | 6 (sulla Panigale di Ray) |
+| documents | 4 (ass. / bollo / rev. / patente) |
+| activities | 43 (21 di Ray, 22 degli altri per il feed) |
+| activityMedia | ~30 |
+| plannedRoutes | 6 |
+| groups | 4 (Garda, Dolomiti, Sport, Amici) |
+| groupMemberships | 22 (Ray in tutti e 4) |
+| groupRides | 21 (7 futuri, 1 in-corso, 1 annullato, 12 completati) |
+| groupRideRSVPs | ~150 (uno per rider/ride) |
+| publishedRoutes | 10 |
+| routeComments | 10 |
+| routeLikes | ~80 |
+| followRelationships | 14 |
+| events | 7 (raduni, track day, viaggi, corso, fiera) |
+| eventRSVPs | 10 |
+| segments | 6 (Italia del nord) |
+| segmentAttempts | ~45 |
+| badges | 8 |
+| userBadges | 18 |
+| challenges | 1 (attiva) |
+| safetyContacts | 3 |
+| liveSessions | 1 (ended_normal) |
+| notifications | 8 (2 non lette) |
+
+### Come usare il DB nelle screens
+
+```tsx
+import { useQuery, useDb } from "@/mocks/DbProvider";
+import { listMyMotorcycles, getLastActivity } from "@/mocks/queries";
+
+export function MyScreen() {
+  const bikes = useQuery((db, userId) => listMyMotorcycles(db, userId));
+  const last  = useQuery((db, userId) => getLastActivity(db, userId));
+  const { toggleLike, setMyRSVP } = useDb();
+  // ...
+}
+```
+
+Regola: **le screen non importano mai direttamente le tabelle**. Sempre via `queries.ts`. Questo è quello che un domani sostituiremo con chiamate Supabase.
+
+### Mutazioni disponibili
+
+- `toggleLike(publishedRouteId)`
+- `setMyRSVP(groupRideId, value)` — aggiorna anche `confirmedCount` denormalizzato sul ride
+- `setPrimaryMotorcycle(motorcycleId)`
+- `markAllNotificationsRead()`
+
+---
 
 ## Stato delle schermate
 
-### IO · personale
-| Screen | Stato | Note |
-|---|---|---|
-| `io.home` | 🟡 Prima pass | Moto primaria, ultima uscita, prossime uscite |
-| `io.mappa` | ⚪ Stub | Mappa interattiva + POI |
-| `io.crea` | 🟡 Prima pass | Hub azioni: nuova uscita, nuovo percorso, import GPX, aggiungi moto |
-| `io.garage` | 🟡 Prima pass | Lista moto con dati mock |
+Tutte e 13 le screen leggono dati dal DB. La colonna "interazioni" segna cosa è già cliccabile.
 
-### GRUPPO
-| Screen | Stato | Note |
-|---|---|---|
-| `gruppo.home` | 🟡 Prima pass | Dashboard del gruppo attivo: crest, prossima uscita, bacheca |
-| `gruppo.pianifica` | ⚪ Stub | Pianifica uscita del gruppo |
-| `gruppo.cordata` | ⚪ Stub | Live session gruppo |
-| `gruppo.storia` | ⚪ Stub | Riepilogo narrativo post-uscita |
-| `gruppo.diario` | ⚪ Stub | Archivio percorsi del gruppo |
+### IO · personale
+| Screen | Stato | Contenuto | Interazioni |
+|---|---|---|---|
+| `io.home` | 🟡 | Moto primaria, ultima uscita con stats, prossime uscite gruppo | — |
+| `io.mappa` | 🟡 | Placeholder mappa, stato moto + prossima scadenza, ultima uscita, POI mock | — |
+| `io.crea` | 🟡 | Hub azioni (Nuova uscita, Nuovo percorso, Import GPX, Aggiungi moto) | — |
+| `io.garage` | 🟡 | Parco moto, scadenze con urgenza colorata, ultime manutenzioni | ✓ set primaria |
+
+### GRUPPO (contesto = gruppo corrente dal selettore)
+| Screen | Stato | Contenuto | Interazioni |
+|---|---|---|---|
+| `gruppo.home` | 🟡 | Crest, descrizione, prossima confermata, membri reali, bacheca uscite | — |
+| `gruppo.pianifica` | 🟡 | Lista planned routes personali (da rivedere: concetto "piano gruppo") | — |
+| `gruppo.cordata` | 🟡 | Empty state se niente live; se ride `in-corso` → mappa placeholder + rider + comandi | — |
+| `gruppo.storia` | 🟡 | Ultima ride completata: stats, replay placeholder, partecipanti | — |
+| `gruppo.diario` | 🟡 | Archivio uscite concluse del gruppo con aggregati | — |
 
 ### MONDO · community
-| Screen | Stato | Note |
-|---|---|---|
-| `mondo.feed` | ⚪ Stub | Feed community pubblico |
-| `mondo.eventi` | ⚪ Stub | Eventi pubblici (raduni, track day) |
-| `mondo.classifica` | ⚪ Stub | Leaderboard, segmenti, sfide |
-| `mondo.profilo` | 🟡 Prima pass | Identità pubblica, statistiche aggregate |
+| Screen | Stato | Contenuto | Interazioni |
+|---|---|---|---|
+| `mondo.feed` | 🟢 | Feed con filter Segui/Tutti, card con hero colorato, author, tags, primi 2 commenti | ✓ like toggle |
+| `mondo.eventi` | 🟢 | Upcoming + past, filtri per kind, RSVP chips, organizer | — |
+| `mondo.classifica` | 🟢 | Challenge attiva, segment switcher + leaderboard (medal colors, evidenza "me"), badge grid earned/locked | — |
+| `mondo.profilo` | 🟢 | Avatar, bio, followers/following, stats aggregate, badge, moto, link impostazioni | — |
 
-Legenda: ⚪ stub · 🟡 prima passata · 🟢 completa · 🔵 rifinita
+Legenda: ⚪ stub · 🟡 prima passata · 🟢 densa · 🔵 rifinita
+
+---
+
+## Principi di lavoro
+
+1. **Esperienza utente prima di tutto.** Ogni schermata deve *sembrare funzionante*. Animazioni, feedback, empty state: ci sono.
+2. **Mock in-memory, non API.** Le screen passano sempre per `queries.ts` + `useQuery`. Zero import diretti delle tabelle.
+3. **Un tipo nuovo** → va prima in `src/types/domain.ts`, poi nel seed, poi nelle queries.
+4. **Incongruenze sì, improvvisazioni no.** Divergenze tra fonti → `docs/INCONSISTENCIES.md`.
+5. **Niente backwards-compatibility.** Prototipo. Se una scelta è sbagliata, si cambia.
+6. **Commenti solo se il perché non è ovvio.**
+
+### Flusso consigliato per una nuova schermata / feature
+
+1. Apri il foglio Excel corrispondente (es. `11_GARAGE`, `14_PROFILO`) → lista funzioni.
+2. Apri `_refs/prototype/app3.jsx` e cerca lo screen corrispondente → reference visuale.
+3. Se servono campi/entità nuove: aggiorna `src/types/domain.ts` → poi `src/mocks/seed/` → poi `src/mocks/queries.ts`.
+4. Scrivi la screen in `src/features/<pillar>/<Nome>Screen.tsx`, importando solo da `@/mocks/DbProvider` e `@/mocks/queries`.
+5. Divergenza importante tra fonti → nuova entry in `docs/INCONSISTENCIES.md`.
 
 ---
 
 ## Roadmap prossimi step
 
-1. Portare tutte le screen dallo "stub" alla "prima passata" con mock più ricchi.
-2. Onboarding 3-step all'ingresso (mostra i 3 pillars, già scritto nel prototipo).
-3. RegistraScreen fullscreen raggiunta da `io.crea > Nuova uscita`.
-4. PostRide fullscreen al termine di una registrazione, poi entra in Storia del gruppo.
-5. Rifinitura animazioni (`screenFadeIn`, `crestPulse`, `avatarRingSpin`, `cordataFlow`: già nel CSS, da agganciare).
-6. Prima revisione con Ray + Lollo, fix basati sul feedback.
-7. Consolidamento dei tipi domain → export in un pacchetto condiviso per il port Flutter.
-8. Allineamento back/front con la spec zip prima di scrivere codice backend reale.
+1. **Gap analysis vs Excel** — passare le 283 funzioni dell'Excel contro quello che c'è nel front, in un `docs/GAP_ANALYSIS.md` (pending dalla sessione precedente).
+2. **Onboarding 3-step** all'ingresso (già scritto nel prototipo — solo da portare).
+3. **RegistraScreen** fullscreen raggiungibile da `io.crea > Nuova uscita`; simula tracking live.
+4. **PostRide** fullscreen al termine di Registra, poi entra in `gruppo.storia`.
+5. **Animazioni** del prototipo (`screenFadeIn`, `crestPulse`, `avatarRingSpin`, `cordataFlow`) già nel CSS: agganciarle dove mancano.
+6. **Commenti / RSVP** come mutazioni reali sulle rispettive screen.
+7. **Safety SOS / LiveSession start** dal profilo o dal cordata.
+8. Detail screens (dettaglio activity, dettaglio published route, dettaglio event, dettaglio ride).
+9. Revisione con Ray + Lollo → fix.
+10. Allineamento back/front con `spec_bundle` prima di scrivere codice backend.
 
 ---
 
-## Naming convention nelle fonti
+## Naming convention
 
-L'utente principale del prototipo si chiama **Ray** (id `u0`). Sono predefiniti 4 gruppi: **Moto Garda**, **Dolomiti Riders**, **Sport Riders**, **Amici** — presi dal prototipo per continuità visiva.
+- Utente principale: **Ray** (`id: u0`).
+- Gruppi predefiniti: **Moto Garda** (g1, ember), **Dolomiti Riders** (g2, info blu), **Sport Riders** (g3, rosso), **Amici** (g4, verde). Presi dal prototipo per continuità visiva.
+- Oggi del prototipo: **23 aprile 2026** (`NOW_ISO` in `DbProvider.tsx`). Tutte le date sono relative a questo.
+- IDs preservati tra sessioni: `u0`, `m1`, `m2`, `a1`-`a3`, `g1`-`g4`, `r1`-`r7`.
