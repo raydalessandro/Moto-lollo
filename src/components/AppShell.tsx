@@ -9,7 +9,8 @@ import {
   type Pillar,
   type ScreenKey,
 } from "./nav/pillars";
-import { groups } from "@/mocks/groups";
+import { useQuery } from "@/mocks/DbProvider";
+import { listMyGroups } from "@/mocks/queries";
 
 import { HomeScreen } from "@/features/io/HomeScreen";
 import { MappaScreen } from "@/features/io/MappaScreen";
@@ -28,11 +29,12 @@ import { ClassificaScreen } from "@/features/mondo/ClassificaScreen";
 import { ProfiloScreen } from "@/features/mondo/ProfiloScreen";
 
 export function AppShell() {
+  const myGroups = useQuery((db, userId) => listMyGroups(db, userId));
   const [screen, setScreen] = useState<ScreenKey>("io.home");
-  const [currentGroupId, setCurrentGroupId] = useState(groups[0].id);
+  const [currentGroupId, setCurrentGroupId] = useState<string>(myGroups[0]?.id ?? "g1");
 
   const pillar: Pillar = pillarOf(screen);
-  const currentGroup = groups.find((g) => g.id === currentGroupId) ?? groups[0];
+  const currentGroup = myGroups.find((g) => g.id === currentGroupId) ?? myGroups[0];
 
   const handlePillarChange = (p: Pillar) => {
     if (p !== pillar) {
@@ -76,6 +78,7 @@ export function AppShell() {
       <Header pillar={pillar} currentGroup={currentGroup} />
       {pillar === "gruppo" && (
         <GroupSelector
+          groups={myGroups}
           currentGroupId={currentGroup.id}
           onChange={setCurrentGroupId}
         />
@@ -95,11 +98,12 @@ export function AppShell() {
 }
 
 interface GroupSelectorProps {
+  groups: ReturnType<typeof listMyGroups>;
   currentGroupId: string;
   onChange: (id: string) => void;
 }
 
-function GroupSelector({ currentGroupId, onChange }: GroupSelectorProps) {
+function GroupSelector({ groups, currentGroupId, onChange }: GroupSelectorProps) {
   return (
     <div className="shrink-0 border-b border-line bg-bg px-3 py-2">
       <div className="flex gap-2 overflow-x-auto scrollbar-hide">

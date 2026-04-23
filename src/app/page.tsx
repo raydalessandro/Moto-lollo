@@ -1,5 +1,10 @@
 import { AppShell } from "@/components/AppShell";
+import { DbProvider } from "@/mocks/DbProvider";
 
 export default function Page() {
-  return <AppShell />;
+  return (
+    <DbProvider>
+      <AppShell />
+    </DbProvider>
+  );
 }

@@ -3,16 +3,22 @@
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { SectionLabel } from "@/components/ui/SectionLabel";
+import { useQuery } from "@/mocks/DbProvider";
+import {
+  listGroupMembers,
+  listUpcomingGroupRides,
+  getNextConfirmedRide,
+} from "@/mocks/queries";
 import type { Group } from "@/types/domain";
-import { groupRides } from "@/mocks/groups";
 
 interface GruppoHomeScreenProps {
   group: Group;
 }
 
 export function GruppoHomeScreen({ group }: GruppoHomeScreenProps) {
-  const rides = groupRides.filter((r) => r.groupId === group.id);
-  const confirmed = rides.find((r) => r.status === "confermata");
+  const members = useQuery((db) => listGroupMembers(db, group.id));
+  const upcoming = useQuery((db, _uid, now) => listUpcomingGroupRides(db, group.id, now));
+  const next = useQuery((db, _uid, now) => getNextConfirmedRide(db, group.id, now));
 
   return (
     <div className="screen-enter flex flex-col gap-6 p-5 pb-24">
@@ -26,7 +32,7 @@ export function GruppoHomeScreen({ group }: GruppoHomeScreenProps) {
               borderColor: `${group.crestColor}55`,
             }}
           >
-            {group.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+            {group.tag}
           </div>
           <div>
             <span
@@ -39,48 +45,81 @@ export function GruppoHomeScreen({ group }: GruppoHomeScreenProps) {
               {group.name}
             </h1>
             <p className="text-sm text-ink-dim">
-              {group.membersCount} membri · {rides.length} uscite in bacheca
+              {members.length} membri · {upcoming.length} uscite in bacheca
             </p>
           </div>
         </div>
+        {group.description && (
+          <p className="mt-3 text-sm text-ink-soft">{group.description}</p>
+        )}
       </section>
 
-      {confirmed && (
+      {next && (
         <section>
           <SectionLabel num="01">Prossima uscita</SectionLabel>
           <Card>
             <div className="flex items-baseline justify-between gap-3">
               <div>
-                <div className="font-display text-lg font-semibold">{confirmed.title}</div>
-                <div className="text-sm text-ink-dim">{confirmed.meetupText}</div>
+                <div className="font-display text-lg font-semibold">{next.title}</div>
+                <div className="text-sm text-ink-dim">{next.meetupText}</div>
               </div>
               <div className="text-right">
                 <div className="font-mono text-sm">
-                  {new Date(confirmed.startAt).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit" })}
+                  {new Date(next.startAt).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit" })}
                 </div>
                 <div
                   className="font-mono text-[11px]"
                   style={{ color: group.crestColor }}
                 >
-                  {new Date(confirmed.startAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                  {new Date(next.startAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
                 </div>
               </div>
             </div>
             <div className="mt-3 flex items-center justify-between text-[11px] text-ink-dim">
-              <span>{confirmed.distanceKm > 0 ? `${confirmed.distanceKm} km` : "Pista"}</span>
+              <span>{next.distanceKm > 0 ? `${next.distanceKm} km · ${Math.round(next.estimatedDurationMin / 60)}h` : "Pista"}</span>
               <span>
-                <span style={{ color: group.crestColor }}>{confirmed.confirmedCount}</span>/{confirmed.invitedCount} confermati
+                <span style={{ color: group.crestColor }}>{next.confirmedCount}</span>/{next.invitedCount} confermati
               </span>
-              <Chip size="sm" active>{confirmed.status}</Chip>
+              <Chip size="sm" active>{next.status}</Chip>
             </div>
           </Card>
         </section>
       )}
 
       <section>
-        <SectionLabel num="02">Tutte le uscite</SectionLabel>
+        <SectionLabel num="02">Membri</SectionLabel>
+        <div className="flex flex-wrap gap-2">
+          {members.map(({ profile, role }) =>
+            profile ? (
+              <div
+                key={profile.id}
+                className="flex items-center gap-2 rounded-full border border-line bg-panel px-2 py-1"
+              >
+                <div
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold"
+                  style={{ background: profile.accentColor, color: "var(--bg)" }}
+                >
+                  {profile.initials}
+                </div>
+                <span className="text-[11px] text-ink">{profile.displayName}</span>
+                {role !== "member" && (
+                  <span
+                    className="font-mono text-[9px] uppercase tracking-widest"
+                    style={{ color: group.crestColor }}
+                  >
+                    · {role}
+                  </span>
+                )}
+              </div>
+            ) : null,
+          )}
+        </div>
+      </section>
+
+      <section>
+        <SectionLabel num="03">Tutte le uscite</SectionLabel>
         <div className="flex flex-col gap-3">
-          {rides.map((r) => (
+          {upcoming.map((r) => (
             <Card key={r.id}>
               <div className="flex items-baseline justify-between gap-3">
                 <div>
@@ -106,28 +145,6 @@ export function GruppoHomeScreen({ group }: GruppoHomeScreenProps) {
             </Card>
           ))}
         </div>
-      </section>
-
-      <section>
-        <SectionLabel num="03">Da costruire</SectionLabel>
-        <ul className="flex flex-col gap-2 rounded-xl border border-line bg-panel p-4">
-          {[
-            "Lista membri del gruppo con avatar e moto",
-            "Crea / proponi una nuova uscita",
-            "Conferma / rifiuta partecipazione (RSVP)",
-            "Chat di gruppo",
-            "Ruoli interni: leader, admin, membro",
-            "Badge del gruppo",
-          ].map((b, i) => (
-            <li key={i} className="flex items-start gap-3 text-sm text-ink-soft">
-              <span
-                className="mt-[7px] inline-block h-[5px] w-[5px] shrink-0 rounded-full"
-                style={{ background: group.crestColor }}
-              />
-              <span>{b}</span>
-            </li>
-          ))}
-        </ul>
       </section>
     </div>
   );

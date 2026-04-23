@@ -1,6 +1,9 @@
+"use client";
+
 import type { Pillar } from "./pillars";
 import type { Group } from "@/types/domain";
-import { currentUser } from "@/mocks/user";
+import { useQuery } from "@/mocks/DbProvider";
+import { getProfile } from "@/mocks/queries";
 
 interface HeaderProps {
   pillar: Pillar;
@@ -14,6 +17,7 @@ const PILLAR_LABELS: Record<Pillar, { num: string; text: string; color: string |
 };
 
 export function Header({ pillar, currentGroup }: HeaderProps) {
+  const me = useQuery((db, userId) => getProfile(db, userId));
   const p = PILLAR_LABELS[pillar];
   const color = p.color ?? currentGroup.crestColor;
   const text = pillar === "gruppo" ? `GRUPPO · ${currentGroup.name}` : p.text;
@@ -33,13 +37,13 @@ export function Header({ pillar, currentGroup }: HeaderProps) {
       </div>
       <div className="flex items-center gap-2">
         <span className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
-          {currentUser.displayName}
+          {me?.displayName}
         </span>
         <div
           className="flex h-8 w-8 items-center justify-center rounded-full border border-line text-[11px] font-semibold"
-          style={{ background: "var(--ember)", color: "var(--bg)" }}
+          style={{ background: me?.accentColor ?? "var(--ember)", color: "var(--bg)" }}
         >
-          {currentUser.displayName.slice(0, 2).toUpperCase()}
+          {me?.initials}
         </div>
       </div>
     </header>
