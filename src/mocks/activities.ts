@@ -16,7 +16,7 @@ export const activities: Activity[] = [
     notes: "Gruppo Garda. Strade pulite, caffè a Edolo.",
     tags: ["alpi", "sunrise", "passi"],
     visibility: "followers",
-    mediaUrls: [],
+    mediaIds: [],
   },
   {
     id: "a2",
@@ -32,7 +32,7 @@ export const activities: Activity[] = [
     title: "Giro del Tremalzo",
     tags: ["garda", "off"],
     visibility: "private",
-    mediaUrls: [],
+    mediaIds: [],
   },
   {
     id: "a3",
@@ -48,6 +48,6 @@ export const activities: Activity[] = [
     title: "Notturna dei laghi",
     tags: ["urban", "night"],
     visibility: "public",
-    mediaUrls: [],
+    mediaIds: [],
   },
 ];

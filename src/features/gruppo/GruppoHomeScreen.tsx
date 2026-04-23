@@ -69,7 +69,7 @@ export function GruppoHomeScreen({ group }: GruppoHomeScreenProps) {
             <div className="mt-3 flex items-center justify-between text-[11px] text-ink-dim">
               <span>{confirmed.distanceKm > 0 ? `${confirmed.distanceKm} km` : "Pista"}</span>
               <span>
-                <span style={{ color: group.crestColor }}>{confirmed.confirmed}</span>/{confirmed.total} confermati
+                <span style={{ color: group.crestColor }}>{confirmed.confirmedCount}</span>/{confirmed.invitedCount} confermati
               </span>
               <Chip size="sm" active>{confirmed.status}</Chip>
             </div>
@@ -99,7 +99,7 @@ export function GruppoHomeScreen({ group }: GruppoHomeScreenProps) {
               <div className="mt-3 flex items-center justify-between text-[11px] text-ink-dim">
                 <span>{r.distanceKm > 0 ? `${r.distanceKm} km` : "Pista"}</span>
                 <span>
-                  {r.confirmed}/{r.total} confermati
+                  {r.confirmedCount}/{r.invitedCount} confermati
                 </span>
                 <Chip size="sm" active={r.status === "confermata"}>{r.status}</Chip>
               </div>

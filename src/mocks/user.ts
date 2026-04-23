@@ -5,8 +5,11 @@ export const currentUser: Profile = {
   username: "ray",
   displayName: "Ray",
   bio: "Touring / passi alpini / colazioni lunghe.",
+  initials: "RY",
+  accentColor: "#ff6a1f",
   role: "user",
   isPublic: true,
+  city: "Brescia",
   createdAt: "2024-05-01T00:00:00Z",
 };
 

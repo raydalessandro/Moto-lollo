@@ -119,7 +119,7 @@ export function HomeScreen() {
                   <div className="mt-3 flex items-center justify-between text-[11px] text-ink-dim">
                     <span>{ride.distanceKm} km</span>
                     <span>
-                      <span className="text-ember">{ride.confirmed}</span>/{ride.total} confermati
+                      <span className="text-ember">{ride.confirmedCount}</span>/{ride.invitedCount} confermati
                     </span>
                     <Chip size="sm" active={ride.status === "confermata"}>{ride.status}</Chip>
                   </div>
