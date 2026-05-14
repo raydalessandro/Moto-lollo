@@ -16,11 +16,16 @@ import type {
   PlannedRoute,
   Group,
   GroupMembership,
+  GroupMembershipRequest,
   GroupRide,
   GroupRideRSVP,
+  RouteProposal,
+  RideBoardComment,
   PublishedRoute,
+  PublishedRouteScope,
   RouteComment,
   RouteLike,
+  SavedRoute,
   FollowRelationship,
   PublicEvent,
   EventRSVP,
@@ -378,4 +383,88 @@ export function listNotifications(db: Db, userId: UUID): Notification[] {
 
 export function countUnreadNotifications(db: Db, userId: UUID): number {
   return listNotifications(db, userId).filter((n) => !n.readAt).length;
+}
+
+// ─── Step 6: moderation, proposals, board, saved routes ─────────────────────
+
+export function isAdminOfGroup(db: Db, userId: UUID, groupId: UUID): boolean {
+  return Object.values(db.groupMemberships).some(
+    (m) =>
+      m.userId === userId &&
+      m.groupId === groupId &&
+      (m.role === "admin" || m.role === "leader"),
+  );
+}
+
+export function listGroupsIAdmin(db: Db, userId: UUID): Group[] {
+  const adminIds = new Set(
+    Object.values(db.groupMemberships)
+      .filter(
+        (m) =>
+          m.userId === userId && (m.role === "admin" || m.role === "leader"),
+      )
+      .map((m) => m.groupId),
+  );
+  return Object.values(db.groups).filter((g) => adminIds.has(g.id));
+}
+
+export function listOtherGroups(db: Db, userId: UUID): Group[] {
+  const myIds = new Set(
+    Object.values(db.groupMemberships)
+      .filter((m) => m.userId === userId)
+      .map((m) => m.groupId),
+  );
+  return Object.values(db.groups).filter((g) => !myIds.has(g.id));
+}
+
+export function listRouteProposals(
+  db: Db,
+  groupId: UUID,
+  status?: RouteProposal["status"],
+): RouteProposal[] {
+  return Object.values(db.routeProposals)
+    .filter((p) => p.groupId === groupId)
+    .filter((p) => !status || p.status === status)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function listMembershipRequests(
+  db: Db,
+  groupId: UUID,
+  status?: GroupMembershipRequest["status"],
+): GroupMembershipRequest[] {
+  return Object.values(db.groupMembershipRequests)
+    .filter((r) => r.groupId === groupId)
+    .filter((r) => !status || r.status === status)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function listBoardComments(
+  db: Db,
+  groupRideId: UUID,
+): RideBoardComment[] {
+  return Object.values(db.rideBoardComments)
+    .filter((c) => c.groupRideId === groupRideId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export function listSavedRoutes(db: Db, userId: UUID): SavedRoute[] {
+  return Object.values(db.savedRoutes)
+    .filter((s) => s.ownerId === userId)
+    .sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+}
+
+export function listSavedPublishedRoutes(db: Db, userId: UUID): PublishedRoute[] {
+  const saved = listSavedRoutes(db, userId);
+  const ids = new Set(saved.map((s) => s.publishedRouteId));
+  return Object.values(db.publishedRoutes).filter((p) => ids.has(p.id));
+}
+
+export function listPublishedRoutesByScope(
+  db: Db,
+  scope: PublishedRouteScope,
+): PublishedRoute[] {
+  return Object.values(db.publishedRoutes)
+    .filter((p) => p.scope === scope)
+    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 }
