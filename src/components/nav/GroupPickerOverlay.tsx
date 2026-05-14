@@ -47,13 +47,13 @@ export function GroupPickerOverlay({
         style={{ pointerEvents: open ? "auto" : "none" }}
       />
 
-      {/* Sheet, slides down from the top */}
+      {/* Sheet, slides down from the top — centered with auto margins */}
       <aside
         role="dialog"
         aria-modal="true"
-        className="absolute left-1/2 top-0 w-full max-w-3xl -translate-x-1/2 border-b border-line bg-bg shadow-2xl transition-transform duration-300 ease-out"
+        className="absolute inset-x-0 top-0 mx-auto w-full max-w-3xl border-b border-line bg-bg shadow-2xl transition-transform duration-300 ease-out"
         style={{
-          transform: open ? "translate(-50%, 0)" : "translate(-50%, -100%)",
+          transform: open ? "translateY(0)" : "translateY(-100%)",
           pointerEvents: open ? "auto" : "none",
         }}
       >
