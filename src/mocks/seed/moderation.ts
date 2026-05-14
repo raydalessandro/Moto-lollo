@@ -8,7 +8,7 @@ import type {
 import { addDays, addHours } from "../rng";
 import { NOW } from "./people";
 
-// ─── SavedRoute ─────────────────────────────────────────────────────────────
+// ─── SavedRoute ──────────────────────────────────────────────────────────────────
 // Routes Ray saved from MONDO feed → end up in his io.mappa archive.
 
 export function seedSavedRoutes(): Record<UUID, SavedRoute> {
@@ -29,7 +29,7 @@ export function seedSavedRoutes(): Record<UUID, SavedRoute> {
   return out;
 }
 
-// ─── RouteProposal ──────────────────────────────────────────────────────────
+// ─── RouteProposal ───────────────────────────────────────────────────────────────
 // Members propose one of their planned routes; the admin approves/rejects.
 
 export function seedRouteProposals(): Record<UUID, RouteProposal> {
@@ -67,7 +67,7 @@ export function seedRouteProposals(): Record<UUID, RouteProposal> {
   return out;
 }
 
-// ─── GroupMembershipRequest ─────────────────────────────────────────────────
+// ─── GroupMembershipRequest ─────────────────────────────────────────────────────
 // Pending join requests visible to the admin.
 
 export function seedMembershipRequests(): Record<UUID, GroupMembershipRequest> {
@@ -90,7 +90,7 @@ export function seedMembershipRequests(): Record<UUID, GroupMembershipRequest> {
       createdAt: addDays(NOW, -daysAgo),
     };
   };
-  // Two riders ask to join Moto Garda — Ray will see them as admin (Step 7).
+  // Two riders ask to join Moto Garda — Ray sees them as admin.
   mk("mr1", "g1", "u_loris",  3, "pending");
   mk("mr2", "g1", "u_max",    2, "pending");
   // Sofia's old request to join Garda — approved.
@@ -98,7 +98,7 @@ export function seedMembershipRequests(): Record<UUID, GroupMembershipRequest> {
   return out;
 }
 
-// ─── RideBoardComment ───────────────────────────────────────────────────────
+// ─── RideBoardComment ──────────────────────────────────────────────────────────────
 // Comments on the bacheca of a group ride (visible only to members).
 
 export function seedRideBoardComments(): Record<UUID, RideBoardComment> {

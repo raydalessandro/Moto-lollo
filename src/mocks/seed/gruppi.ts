@@ -11,7 +11,7 @@ import { addDays } from "../rng";
 import { NOW } from "./people";
 
 export function seedGroups(): Record<UUID, Group> {
-  // Step 6: all groups are private + admin-moderated. area + publicRoutesCount
+  // All groups are private + admin-moderated. area + publicRoutesCount
   // are denormalized so the discovery list can render without joins.
   return {
     g1: { id: "g1", slug: "garda",    name: "Moto Garda",      tag: "GRD", crestColor: "#ff6a1f", description: "Passi alpini e colazioni presto.", membersCount: 8,  foundedAt: "2022-03-14T00:00:00Z", isPrivate: true, area: "Lago di Garda · Alpi orobiche", publicRoutesCount: 3 },
