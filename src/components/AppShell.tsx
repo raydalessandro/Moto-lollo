@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Header } from "./nav/Header";
 import { BottomNav } from "./nav/BottomNav";
 import { HamburgerDrawer, type DrawerDestination } from "./nav/HamburgerDrawer";
+import { NavigationOverlay, type NavMode } from "./nav/NavigationOverlay";
 import {
   PILLARS,
   pillarOf,
@@ -43,6 +44,7 @@ export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [exploreOpen, setExploreOpen] = useState(false);
+  const [navMode, setNavMode] = useState<NavMode | null>(null);
 
   const pillar: Pillar = pillarOf(screen);
   // currentGroup can now be a group I'm NOT a member of (after discovery
@@ -72,7 +74,7 @@ export function AppShell() {
       case "io.mappa":
         return <MappaScreen />;
       case "io.registra":
-        return <RegistraScreen />;
+        return <RegistraScreen onStartNavigation={setNavMode} />;
       case "io.garage":
         return <GarageScreen />;
       case "gruppo.home":
@@ -80,7 +82,7 @@ export function AppShell() {
       case "gruppo.pianifica":
         return <PianificaScreen group={currentGroup} isMember={isMemberOfCurrent} />;
       case "gruppo.cordata":
-        return <CordataScreen group={currentGroup} />;
+        return <CordataScreen group={currentGroup} onStartNavigation={setNavMode} />;
       case "gruppo.storia":
         return <StoriaScreen group={currentGroup} />;
       case "gruppo.diario":
@@ -141,6 +143,10 @@ export function AppShell() {
           }}
           onClose={() => setExploreOpen(false)}
         />
+      )}
+
+      {navMode && (
+        <NavigationOverlay mode={navMode} onClose={() => setNavMode(null)} />
       )}
     </div>
   );
