@@ -19,7 +19,9 @@ type FeedFilter = "following" | "all";
 
 export function FeedScreen() {
   const [filter, setFilter] = useState<FeedFilter>("following");
+  const [onlyCars, setOnlyCars] = useState(false);
   const feed = useQuery((db, userId) => listFeedFor(db, userId, filter));
+  const visible = onlyCars ? feed.filter((p) => p.alsoForCars) : feed;
 
   return (
     <div className="screen-enter flex flex-col gap-6 p-5 pb-24">
@@ -31,28 +33,64 @@ export function FeedScreen() {
           Feed
         </h1>
         <p className="mt-1 text-sm text-ink-dim">
-          {feed.length} contenuti · guida tua o di chi segui
+          {visible.length} contenuti · guida tua o di chi segui
         </p>
       </section>
 
-      <div className="flex gap-2">
-        <Chip active={filter === "following"} onClick={() => setFilter("following")}>
-          Segui
-        </Chip>
-        <Chip active={filter === "all"} onClick={() => setFilter("all")}>
-          Tutti
-        </Chip>
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <Chip active={filter === "following"} onClick={() => setFilter("following")}>
+            Segui
+          </Chip>
+          <Chip active={filter === "all"} onClick={() => setFilter("all")}>
+            Tutti
+          </Chip>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOnlyCars((v) => !v)}
+          className="flex items-center justify-between rounded-xl border bg-panel px-3 py-2 transition-colors"
+          style={{
+            borderColor: onlyCars ? "var(--info)" : "var(--line)",
+            background: onlyCars ? "rgba(107, 176, 255, 0.08)" : "var(--panel)",
+          }}
+        >
+          <div className="flex items-center gap-2 text-left">
+            <Icon
+              d="M5 17h14 M5 17l2-7h10l2 7 M7 17v3 M17 17v3 M7 10V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"
+              size={14}
+              className={onlyCars ? "text-info" : "text-ink-dim"}
+            />
+            <span
+              className="text-[12px] font-medium"
+              style={{ color: onlyCars ? "var(--info)" : "var(--ink-soft)" }}
+            >
+              Solo percorsi anche per auto
+            </span>
+          </div>
+          <span
+            className="relative inline-block h-5 w-9 rounded-full transition-colors"
+            style={{ background: onlyCars ? "var(--info)" : "var(--line)" }}
+          >
+            <span
+              className="absolute top-0.5 block h-4 w-4 rounded-full bg-bg transition-transform"
+              style={{ left: onlyCars ? "calc(100% - 18px)" : "2px" }}
+            />
+          </span>
+        </button>
       </div>
 
       <section>
         <SectionLabel num="01">Ultimi percorsi</SectionLabel>
         <div className="flex flex-col gap-4">
-          {feed.map((p) => (
+          {visible.map((p) => (
             <FeedCard key={p.id} route={p} />
           ))}
-          {feed.length === 0 && (
+          {visible.length === 0 && (
             <div className="rounded-xl border border-line bg-panel p-6 text-center text-sm text-ink-dim">
-              Nessun contenuto. Segui qualcuno o passa a &ldquo;Tutti&rdquo;.
+              {onlyCars
+                ? "Nessun percorso adatto anche alle auto in questo feed."
+                : "Nessun contenuto. Segui qualcuno o passa a “Tutti”."}
             </div>
           )}
         </div>
@@ -107,10 +145,19 @@ function FeedCard({ route }: { route: PublishedRoute }) {
         <p className="text-sm text-ink-soft">&ldquo;{route.coverText}&rdquo;</p>
       )}
 
-      <div className="mt-4 flex items-center gap-4 text-[11px] text-ink-dim">
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-ink-dim">
         <span>{route.distanceKm} km</span>
         {route.durationMin && (
           <span>{Math.floor(route.durationMin / 60)}h {route.durationMin % 60}m</span>
+        )}
+        {route.alsoForCars && (
+          <span className="flex items-center gap-1 text-info">
+            <Icon
+              d="M5 17h14 M5 17l2-7h10l2 7 M7 17v3 M17 17v3 M7 10V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"
+              size={11}
+            />
+            anche auto
+          </span>
         )}
         <span className="ml-auto flex gap-1">
           {route.tags.slice(0, 3).map((t) => (
