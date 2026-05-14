@@ -4,11 +4,8 @@ import type {
   RouteLike,
   PublicEvent,
   EventRSVP,
-  Segment,
-  SegmentAttempt,
   Badge,
   UserBadge,
-  Challenge,
   UUID,
 } from "@/types/domain";
 import { addDays, makeRng } from "../rng";
@@ -45,8 +42,7 @@ const PUBS: PubSeed[] = [
 export function seedPublishedRoutes(): Record<UUID, PublishedRoute> {
   const out: Record<UUID, PublishedRoute> = {};
   for (const p of PUBS) {
-    // Step 6 — denormalized counters and scope. For the prototype we use the
-    // route's index as a deterministic seed for counters so refreshes are
+    // Denormalized counters: deterministic per-route index so refreshes are
     // stable. ~30% of public routes also work for cars.
     const idx = PUBS.indexOf(p);
     const savedCount = 4 + ((idx * 7) % 23);
@@ -135,7 +131,7 @@ export function seedRouteLikes(): Record<UUID, RouteLike> {
   return out;
 }
 
-// ── Events ──────────────────────────────────────────────────────────────────
+// ── Events ───────────────────────────────────────────────────────────────────
 
 interface EventSeed {
   id: UUID;
@@ -199,64 +195,7 @@ export function seedEventRSVPs(): Record<UUID, EventRSVP> {
   return out;
 }
 
-// ── Classifica (segments, attempts, badges, challenges) ────────────────────
-
-const SEGMENTS: Array<Omit<Segment, "createdAt">> = [
-  { id: "s1", title: "Passo del Tonale salita",  area: "Val Camonica",  distanceKm: 18.4, elevationGainM: 1300, surface: "asfalto" },
-  { id: "s2", title: "Tremalzo ovest",           area: "Garda",         distanceKm: 11.8, elevationGainM:  880, surface: "misto"   },
-  { id: "s3", title: "Gardena est-ovest",        area: "Dolomiti",      distanceKm:  9.5, elevationGainM:  640, surface: "asfalto" },
-  { id: "s4", title: "Stelvio north face",       area: "Valtellina",    distanceKm: 24.3, elevationGainM: 1800, surface: "asfalto" },
-  { id: "s5", title: "Mortirolo climb",          area: "Valtellina",    distanceKm: 12.4, elevationGainM: 1300, surface: "asfalto" },
-  { id: "s6", title: "Lago d'Iseo costa ovest",  area: "Lombardia",     distanceKm: 32.0, elevationGainM:  220, surface: "asfalto" },
-];
-
-export function seedSegments(): Record<UUID, Segment> {
-  const out: Record<UUID, Segment> = {};
-  for (const s of SEGMENTS) {
-    out[s.id] = { ...s, createdAt: addDays(NOW, -420) };
-  }
-  return out;
-}
-
-export function seedSegmentAttempts(): Record<UUID, SegmentAttempt> {
-  const rng = makeRng(99);
-  const out: Record<UUID, SegmentAttempt> = {};
-  const candidates: Array<{ userId: UUID; activityId: UUID }> = [
-    { userId: "u0",        activityId: "a1" },
-    { userId: "u0",        activityId: "a5" },
-    { userId: "u0",        activityId: "a8" },
-    { userId: "u_marco",   activityId: "b_act1" },
-    { userId: "u_marco",   activityId: "b_act2" },
-    { userId: "u_luca",    activityId: "b_act5" },
-    { userId: "u_luca",    activityId: "b_act6" },
-    { userId: "u_andrea",  activityId: "b_act7" },
-    { userId: "u_anna",    activityId: "b_act11" },
-    { userId: "u_davide",  activityId: "b_act13" },
-    { userId: "u_sofia",   activityId: "b_act14" },
-    { userId: "u_matteo",  activityId: "b_act15" },
-    { userId: "u_fede",    activityId: "b_act17" },
-    { userId: "u_loris",   activityId: "b_act19" },
-    { userId: "u_max",     activityId: "b_act20" },
-  ];
-  let i = 0;
-  for (const seg of SEGMENTS) {
-    const baseTime = seg.distanceKm * 60; // seconds, rough
-    const attempts = rng.sample(candidates, 6 + rng.int(0, 3));
-    for (const c of attempts) {
-      i += 1;
-      const jitter = rng.float(0.85, 1.2);
-      out[`sa${i}`] = {
-        id: `sa${i}`,
-        segmentId: seg.id,
-        userId: c.userId,
-        activityId: c.activityId,
-        durationSeconds: Math.round(baseTime * jitter),
-        attemptedAt: addDays(NOW, -rng.int(1, 200)),
-      };
-    }
-  }
-  return out;
-}
+// ── Classifica (badges) ─────────────────────────────────────────────────────────
 
 export function seedBadges(): Record<UUID, Badge> {
   const rows: Badge[] = [
@@ -300,18 +239,4 @@ export function seedUserBadges(): Record<UUID, UserBadge> {
   mk("ub17", "u_giulia",  "bd1",  200);
   mk("ub18", "u_dani",    "bd7",   60);
   return out;
-}
-
-export function seedChallenges(): Record<UUID, Challenge> {
-  return {
-    ch1: {
-      id: "ch1",
-      title: "Maggio ruggente",
-      description: "500 km nel mese di maggio. In sella a qualsiasi ora.",
-      startAt: "2026-05-01T00:00:00Z",
-      endAt:   "2026-05-31T23:59:59Z",
-      targetKm: 500,
-      participantsCount: 184,
-    },
-  };
 }

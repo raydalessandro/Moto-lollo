@@ -21,11 +21,8 @@ import type {
   FollowRelationship,
   PublicEvent,
   EventRSVP,
-  Segment,
-  SegmentAttempt,
   Badge,
   UserBadge,
-  Challenge,
   SafetyContact,
   LiveSession,
   Notification,
@@ -62,11 +59,8 @@ import {
   seedRouteLikes,
   seedEvents,
   seedEventRSVPs,
-  seedSegments,
-  seedSegmentAttempts,
   seedBadges,
   seedUserBadges,
-  seedChallenges,
 } from "./seed/mondo";
 import {
   seedSavedRoutes,
@@ -98,11 +92,8 @@ export interface Db {
   followRelationships: Record<UUID, FollowRelationship>;
   events: Record<UUID, PublicEvent>;
   eventRSVPs: Record<UUID, EventRSVP>;
-  segments: Record<UUID, Segment>;
-  segmentAttempts: Record<UUID, SegmentAttempt>;
   badges: Record<UUID, Badge>;
   userBadges: Record<UUID, UserBadge>;
-  challenges: Record<UUID, Challenge>;
   safetyContacts: Record<UUID, SafetyContact>;
   liveSessions: Record<UUID, LiveSession>;
   notifications: Record<UUID, Notification>;
@@ -132,11 +123,8 @@ export function seedDb(): Db {
     followRelationships: seedFollows(),
     events: seedEvents(),
     eventRSVPs: seedEventRSVPs(),
-    segments: seedSegments(),
-    segmentAttempts: seedSegmentAttempts(),
     badges: seedBadges(),
     userBadges: seedUserBadges(),
-    challenges: seedChallenges(),
     safetyContacts: seedSafetyContacts(),
     liveSessions: seedLiveSessions(),
     notifications: seedNotifications(),
