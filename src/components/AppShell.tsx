@@ -15,7 +15,7 @@ import { listMyGroups } from "@/mocks/queries";
 
 import { HomeScreen } from "@/features/io/HomeScreen";
 import { MappaScreen } from "@/features/io/MappaScreen";
-import { CreaScreen } from "@/features/io/CreaScreen";
+import { RegistraScreen } from "@/features/io/RegistraScreen";
 import { GarageScreen } from "@/features/io/GarageScreen";
 
 import { GruppoHomeScreen } from "@/features/gruppo/GruppoHomeScreen";
@@ -63,8 +63,8 @@ export function AppShell() {
         return <HomeScreen />;
       case "io.mappa":
         return <MappaScreen />;
-      case "io.crea":
-        return <CreaScreen />;
+      case "io.registra":
+        return <RegistraScreen />;
       case "io.garage":
         return <GarageScreen />;
       case "gruppo.home":
