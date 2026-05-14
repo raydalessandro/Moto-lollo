@@ -160,6 +160,12 @@ export interface Group {
   description?: string;
   membersCount: number;
   foundedAt: ISODate;
+  /** Always true in MVP (closed, admin-moderated). Explicit for the future. */
+  isPrivate: boolean;
+  /** Geographical area shown to non-members on the discovery list. */
+  area?: string;
+  /** Routes the group has made public, denormalized for the preview card. */
+  publicRoutesCount: number;
 }
 
 export interface GroupMembership {
@@ -168,6 +174,41 @@ export interface GroupMembership {
   userId: UUID;
   role: "leader" | "admin" | "member";
   joinedAt: ISODate;
+}
+
+/** Pending request to join a (private) group — admin approves or rejects. */
+export interface GroupMembershipRequest {
+  id: UUID;
+  groupId: UUID;
+  userId: UUID;
+  status: "pending" | "approved" | "rejected";
+  reviewedBy?: UUID;
+  reviewedAt?: ISODate;
+  createdAt: ISODate;
+}
+
+export type RouteProposalStatus = "pending" | "approved" | "rejected";
+
+/** A member proposes one of their planned routes to a group admin. */
+export interface RouteProposal {
+  id: UUID;
+  groupId: UUID;
+  proposedBy: UUID;
+  plannedRouteId: UUID;
+  status: RouteProposalStatus;
+  reviewedBy?: UUID;
+  reviewedAt?: ISODate;
+  note?: string;
+  createdAt: ISODate;
+}
+
+/** Comment on a group ride's board (visible to group members only). */
+export interface RideBoardComment {
+  id: UUID;
+  groupRideId: UUID;
+  authorId: UUID;
+  text: string;
+  createdAt: ISODate;
 }
 
 export type GroupRideStatus =
@@ -192,6 +233,8 @@ export interface GroupRide {
   /** Denormalized counts, kept on the ride for fast list rendering. */
   invitedCount: number;
   confirmedCount: number;
+  /** User the admin designated to lead navigation during the ride. */
+  navigatorUserId?: UUID;
 }
 
 export type RSVPValue = "going" | "maybe" | "no";
@@ -208,6 +251,14 @@ export interface GroupRideRSVP {
 
 export type PublishedRouteSource = "activity" | "planned_route";
 
+/**
+ * Visibility scope of a published route.
+ *  - "public" → visible across the whole MONDO feed.
+ *  - "group"  → visible only inside the publishing group's feed.
+ *               The group admin can later promote a "group" route to "public".
+ */
+export type PublishedRouteScope = "public" | "group";
+
 export interface PublishedRoute {
   id: UUID;
   sourceType: PublishedRouteSource;
@@ -221,6 +272,27 @@ export interface PublishedRoute {
   area?: string;
   tags: string[];
   publishedAt: ISODate;
+  /** Where this route is visible. Defaults to "public" in the seed. */
+  scope: PublishedRouteScope;
+  /** When scope === "group", the route is only visible to that group. */
+  publishedToGroupId?: UUID;
+  /** Flag on the route — set to true if the path also works on four wheels. */
+  alsoForCars: boolean;
+  /** Denormalized counters for ranking (Mondo Classifica). */
+  savedCount: number;
+  navigatedCount: number;
+}
+
+/**
+ * A route saved by a user from a feed (Mondo or a Group). Goes into the
+ * personal archive on io.mappa.
+ */
+export interface SavedRoute {
+  id: UUID;
+  ownerId: UUID;
+  publishedRouteId: UUID;
+  savedAt: ISODate;
+  note?: string;
 }
 
 export interface RouteComment {
