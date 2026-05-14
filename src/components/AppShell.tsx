@@ -78,7 +78,7 @@ export function AppShell() {
       case "gruppo.home":
         return <GruppoHomeScreen group={currentGroup} isMember={isMemberOfCurrent} />;
       case "gruppo.pianifica":
-        return <PianificaScreen />;
+        return <PianificaScreen group={currentGroup} isMember={isMemberOfCurrent} />;
       case "gruppo.cordata":
         return <CordataScreen group={currentGroup} />;
       case "gruppo.storia":
@@ -362,7 +362,8 @@ function GroupRow({
           {group.area ?? "—"} · {group.membersCount} membri · {group.publicRoutesCount} percorsi pubblici
         </div>
       </div>
-      <span className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
+      <span class
+="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
         →
       </span>
     </button>
