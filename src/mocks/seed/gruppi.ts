@@ -11,11 +11,13 @@ import { addDays } from "../rng";
 import { NOW } from "./people";
 
 export function seedGroups(): Record<UUID, Group> {
+  // Step 6: all groups are private + admin-moderated. area + publicRoutesCount
+  // are denormalized so the discovery list can render without joins.
   return {
-    g1: { id: "g1", slug: "garda",    name: "Moto Garda",      tag: "GRD", crestColor: "#ff6a1f", description: "Passi alpini e colazioni presto.", membersCount: 8,  foundedAt: "2022-03-14T00:00:00Z" },
-    g2: { id: "g2", slug: "dolomiti", name: "Dolomiti Riders", tag: "DOL", crestColor: "#6bb0ff", description: "Dolomiti, lentamente.",             membersCount: 6,  foundedAt: "2023-05-02T00:00:00Z" },
-    g3: { id: "g3", slug: "sport",    name: "Sport Riders",    tag: "SPT", crestColor: "#d13a3a", description: "Track day, misti veloci.",          membersCount: 4,  foundedAt: "2024-01-20T00:00:00Z" },
-    g4: { id: "g4", slug: "amici",    name: "Amici",           tag: "AMC", crestColor: "#7da35f", description: "Colazioni + giretti.",              membersCount: 4,  foundedAt: "2021-06-01T00:00:00Z" },
+    g1: { id: "g1", slug: "garda",    name: "Moto Garda",      tag: "GRD", crestColor: "#ff6a1f", description: "Passi alpini e colazioni presto.", membersCount: 8,  foundedAt: "2022-03-14T00:00:00Z", isPrivate: true, area: "Lago di Garda · Alpi orobiche", publicRoutesCount: 3 },
+    g2: { id: "g2", slug: "dolomiti", name: "Dolomiti Riders", tag: "DOL", crestColor: "#6bb0ff", description: "Dolomiti, lentamente.",             membersCount: 6,  foundedAt: "2023-05-02T00:00:00Z", isPrivate: true, area: "Dolomiti · Trentino-Alto Adige", publicRoutesCount: 4 },
+    g3: { id: "g3", slug: "sport",    name: "Sport Riders",    tag: "SPT", crestColor: "#d13a3a", description: "Track day, misti veloci.",          membersCount: 4,  foundedAt: "2024-01-20T00:00:00Z", isPrivate: true, area: "Lombardia · circuiti",          publicRoutesCount: 0 },
+    g4: { id: "g4", slug: "amici",    name: "Amici",           tag: "AMC", crestColor: "#7da35f", description: "Colazioni + giretti.",              membersCount: 4,  foundedAt: "2021-06-01T00:00:00Z", isPrivate: true, area: "Franciacorta",                  publicRoutesCount: 2 },
   };
 }
 
@@ -72,7 +74,7 @@ export function seedMemberships(): Record<UUID, GroupMembership> {
   return out;
 }
 
-interface RideSeed {
+interface RideSeed extends Partial<Pick<GroupRide, "navigatorUserId">> {
   id: UUID;
   groupId: UUID;
   title: string;
@@ -91,7 +93,7 @@ interface RideSeed {
 
 const RIDES: RideSeed[] = [
   // Futuri (preservati dai mock precedenti)
-  { id: "r1", groupId: "g1", title: "Passo del Tonale, sunrise", meetupText: "Bar Aquila, Salò",  daysFromNow:   9, hour:  6, distanceKm: 187, estimatedDurationMin: 270, status: "confermata", proposedBy: "u_marco",  plannedRouteId: "pr2", invitedCount: 8,  confirmedCount: 5 },
+  { id: "r1", groupId: "g1", title: "Passo del Tonale, sunrise", meetupText: "Bar Aquila, Salò",  daysFromNow:   9, hour:  6, distanceKm: 187, estimatedDurationMin: 270, status: "confermata", proposedBy: "u_marco",  plannedRouteId: "pr2", invitedCount: 8,  confirmedCount: 5, navigatorUserId: "u_marco" },
   { id: "r2", groupId: "g1", title: "Giro del Tremalzo",         meetupText: "Piazzale Riva",     daysFromNow:  17, hour:  8, distanceKm: 132, estimatedDurationMin: 200, status: "proposta",   proposedBy: "u0",       invitedCount: 8,  confirmedCount: 3 },
   { id: "r3", groupId: "g1", title: "Notturna dei laghi",        meetupText: "P.zza Duomo BS",    daysFromNow:  22, hour: 20, distanceKm:  96, estimatedDurationMin: 160, status: "proposta",   proposedBy: "u_giulia", plannedRouteId: "pr5", invitedCount: 8, confirmedCount: 2 },
   { id: "r4", groupId: "g2", title: "Passo Gardena + Sella",     meetupText: "Ortisei piazza",    daysFromNow:  16, hour:  7, distanceKm: 240, estimatedDurationMin: 340, status: "confermata", proposedBy: "u_anna",   invitedCount: 12, confirmedCount: 8 },
@@ -99,7 +101,7 @@ const RIDES: RideSeed[] = [
   { id: "r6", groupId: "g3", title: "Track day Mugello",         meetupText: "Paddock MG",        daysFromNow:  23, hour:  8, distanceKm:   0, estimatedDurationMin: 360, status: "confermata", proposedBy: "u_fede",   invitedCount: 4,  confirmedCount: 3 },
   { id: "r7", groupId: "g4", title: "Colazione in Franciacorta", meetupText: "Bar Centrale",      daysFromNow:  10, hour:  9, distanceKm:  78, estimatedDurationMin: 150, status: "confermata", proposedBy: "u_dani",   invitedCount: 6,  confirmedCount: 4 },
   // In corso
-  { id: "r_now", groupId: "g1", title: "Franciacorta loop", meetupText: "Bar Aquila, Salò", daysFromNow: 0, hour: 8, distanceKm: 72, estimatedDurationMin: 150, status: "in-corso", proposedBy: "u_marco", invitedCount: 8, confirmedCount: 6 },
+  { id: "r_now", groupId: "g1", title: "Franciacorta loop", meetupText: "Bar Aquila, Salò", daysFromNow: 0, hour: 8, distanceKm: 72, estimatedDurationMin: 150, status: "in-corso", proposedBy: "u_marco", invitedCount: 8, confirmedCount: 6, navigatorUserId: "u_marco" },
   // Annullata
   { id: "r_cxl", groupId: "g2", title: "Presolana spring edition", meetupText: "Clusone piazza", daysFromNow: -5, hour: 8, distanceKm: 160, estimatedDurationMin: 240, status: "annullata", proposedBy: "u_anna", invitedCount: 12, confirmedCount: 3 },
   // Completate — collegate ad activity vere
@@ -138,6 +140,7 @@ export function seedGroupRides(): Record<UUID, GroupRide> {
       activityIds: r.activityIds ?? [],
       invitedCount: r.invitedCount,
       confirmedCount: r.confirmedCount,
+      navigatorUserId: r.navigatorUserId,
     };
   }
   return out;
