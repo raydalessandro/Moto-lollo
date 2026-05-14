@@ -67,10 +67,10 @@ export function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
   }
 
   return (
-    <div className="screen-enter">
+    <div className="screen-enter flex h-full flex-col overflow-hidden">
       {/* HERO — personal cockpit */}
       <section
-        className="relative overflow-hidden"
+        className="relative shrink-0 overflow-hidden"
         style={{ background: "linear-gradient(165deg, #1a1410 0%, #0b0a08 70%)" }}
       >
         <div
@@ -85,32 +85,32 @@ export function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
           }}
         />
 
-        <div className="relative px-5 pb-6 pt-5">
-          <div className="mb-5 flex items-start justify-between">
+        <div className="relative px-5 pb-4 pt-4">
+          <div className="mb-3 flex items-start justify-between">
             <div>
               <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.25em] text-ink-dim">
                 ▸ sessione · {new Date(now).toLocaleDateString("it-IT", { weekday: "short" })}{" "}
                 {new Date(now).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
               </p>
-              <h1 className="font-display text-3xl font-medium leading-tight tracking-tight">
+              <h1 className="font-display text-2xl font-medium leading-tight tracking-tight">
                 Ciao, {me?.displayName}.
               </h1>
-              <p className="mt-1 text-sm text-ink-soft">{WEATHER.sub}</p>
+              <p className="mt-1 text-xs text-ink-soft">{WEATHER.sub}</p>
             </div>
             <div className="text-right">
               <Icon
                 d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"
-                size={20}
+                size={18}
                 className="ml-auto text-ember"
               />
-              <p className="mt-1 font-display text-2xl tabular-nums">
+              <p className="mt-1 font-display text-xl tabular-nums">
                 {WEATHER.temp}°
               </p>
             </div>
           </div>
 
           {/* Odometer stats */}
-          <div className="mb-5 flex items-end border-y border-line py-3.5">
+          <div className="mb-3 flex items-end border-y border-line py-2">
             {[
               { label: "km totali",    value: primary?.totalKm.toLocaleString("it-IT") ?? "—", color: undefined },
               { label: "questo mese",  value: monthKm.toLocaleString("it-IT"), color: "var(--ember)" },
@@ -121,11 +121,11 @@ export function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
                   <span className="absolute left-0 top-1 bottom-1 w-px bg-line" />
                 )}
                 <div className="px-3">
-                  <p className="mb-1 font-mono text-[9px] uppercase tracking-widest text-ink-dim">
+                  <p className="mb-0.5 font-mono text-[9px] uppercase tracking-widest text-ink-dim">
                     {s.label}
                   </p>
                   <p
-                    className="font-display text-2xl font-medium leading-none tracking-tight tabular-nums"
+                    className="font-display text-xl font-medium leading-none tracking-tight tabular-nums"
                     style={s.color ? { color: s.color } : undefined}
                   >
                     {s.value}
@@ -139,7 +139,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
           <button
             type="button"
             onClick={() => onNavigate?.("io.registra")}
-            className="group flex w-full items-center justify-between rounded-xl px-5 py-4 transition-all active:scale-[0.99]"
+            className="group flex w-full items-center justify-between rounded-xl px-5 py-2.5 transition-all active:scale-[0.99]"
             style={{
               background: "var(--ember)",
               color: "var(--bg)",
@@ -148,24 +148,24 @@ export function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
           >
             <div className="flex items-center gap-3">
               <div
-                className="flex h-9 w-9 items-center justify-center rounded-full"
+                className="flex h-8 w-8 items-center justify-center rounded-full"
                 style={{ background: "rgba(0,0,0,0.13)" }}
               >
-                <Icon d="M6 3l14 9-14 9z" size={15} />
+                <Icon d="M6 3l14 9-14 9z" size={13} />
               </div>
               <div className="text-left">
-                <p className="font-mono text-xs font-medium uppercase tracking-widest opacity-70">
+                <p className="font-mono text-[10px] font-medium uppercase tracking-widest opacity-70">
                   avvia uscita
                 </p>
-                <p className="text-base font-semibold">Sono in sella</p>
+                <p className="text-sm font-semibold">Sono in sella</p>
               </div>
             </div>
-            <Icon d="M9 18l6-6-6-6" size={18} />
+            <Icon d="M9 18l6-6-6-6" size={16} />
           </button>
         </div>
       </section>
 
-      <div className="space-y-6 px-4 py-5 pb-32">
+      <div className="flex-1 space-y-3 overflow-hidden px-4 py-3">
         {/* AVVISI */}
         {advisories.length > 0 && (
           <section>
@@ -198,108 +198,19 @@ export function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
           </section>
         )}
 
-        {/* CONDIZIONI */}
-        <section>
-          <SectionLabel num="02">Condizioni</SectionLabel>
-          <Card>
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <p className="text-base font-medium">{WEATHER.cond}</p>
-                <p className="text-xs text-ink-soft">strada {WEATHER.strada}</p>
-              </div>
-              <Icon
-                d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"
-                size={32}
-                className="text-ink-soft"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-3 border-t border-line pt-3">
-              {[
-                {
-                  iconPath: "M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2 M9.6 4.6A2 2 0 1 1 11 8H2 M12.6 19.4A2 2 0 1 0 14 16H2",
-                  label: "vento",
-                  value: `${WEATHER.vento} km/h`,
-                },
-                {
-                  iconPath: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
-                  label: "visibilità",
-                  value: WEATHER.visib,
-                },
-                {
-                  iconPath: "M22 7l-9 9-4-4-7 7 M16 7h6v6",
-                  label: "pressione",
-                  value: WEATHER.pressione,
-                },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Icon d={item.iconPath} size={12} className="text-ink-dim" />
-                  <div>
-                    <p className="font-mono text-[9px] uppercase tracking-wider text-ink-dim">
-                      {item.label}
-                    </p>
-                    <p className="font-mono text-xs tabular-nums">{item.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </section>
-
-        {/* SCORCIATOIE */}
-        <section>
-          <SectionLabel num="03">Scorciatoie</SectionLabel>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              {
-                label: "Trova benzina",
-                iconPath:
-                  "M3 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18 M2 22h14 M4 11h10 M15 6l3 3v9a2 2 0 0 0 4 0V10.83a2 2 0 0 0-.59-1.42L18 6z",
-                onClick: () => {},
-              },
-              {
-                label: "Percorso casuale",
-                iconPath:
-                  "M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M6 17c5 0 6-5 12-5 M6 15V7a2 2 0 0 1 2-2h4 M18 9v8a2 2 0 0 1-2 2h-4",
-                onClick: () => onNavigate?.("io.registra"),
-              },
-              {
-                label: "Torna a casa",
-                iconPath: "M3 11l19-9-9 19-2-8z",
-                onClick: () => {},
-              },
-              {
-                label: "Ultime tracce",
-                iconPath:
-                  "M5 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M5 15l3-7 4 7 3-7h-3 M15 8h3",
-                onClick: () => onNavigate?.("io.garage"),
-              },
-            ].map((s) => (
-              <button
-                key={s.label}
-                type="button"
-                onClick={s.onClick}
-                className="flex flex-col items-start gap-6 rounded-xl border border-line bg-panel p-3 text-left transition-opacity hover:opacity-90"
-              >
-                <Icon d={s.iconPath} size={16} className="text-ember" />
-                <span className="text-sm">{s.label}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
         {/* ULTIMA USCITA */}
         {last && (
           <section>
             <SectionLabel
-              num="04"
+              num="02"
               action="storico"
               onAction={() => onNavigate?.("io.garage")}
             >
               Ultima uscita
             </SectionLabel>
             <Card className="!p-0 overflow-hidden">
-              <MiniMap seed={last.polylineSeed ?? 1} height={96} />
-              <div className="p-4">
+              <MiniMap seed={last.polylineSeed ?? 1} height={60} />
+              <div className="p-3">
                 <div className="mb-3 flex items-start justify-between">
                   <div>
                     <p className="text-base font-medium">{last.title}</p>
@@ -337,7 +248,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
         {primary && (
           <section>
             <SectionLabel
-              num="05"
+              num="03"
               action="garage"
               onAction={() => onNavigate?.("io.garage")}
             >
