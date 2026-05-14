@@ -14,9 +14,11 @@ import {
   isAdminOfGroup,
 } from "@/mocks/queries";
 import type { Group, GroupRide, Profile } from "@/types/domain";
+import type { NavMode } from "@/components/nav/NavigationOverlay";
 
 interface CordataScreenProps {
   group: Group;
+  onStartNavigation?: (mode: NavMode) => void;
 }
 
 type CordataPhase =
@@ -24,7 +26,7 @@ type CordataPhase =
   | { kind: "pre"; ride: GroupRide }
   | { kind: "live"; ride: GroupRide };
 
-export function CordataScreen({ group }: CordataScreenProps) {
+export function CordataScreen({ group, onStartNavigation }: CordataScreenProps) {
   const allRides = useQuery((db) => listGroupRides(db, group.id));
   const amAdmin = useQuery((db, userId) => isAdminOfGroup(db, userId, group.id));
 
@@ -41,7 +43,14 @@ export function CordataScreen({ group }: CordataScreenProps) {
   if (phase.kind === "empty") return <EmptyState group={group} />;
   if (phase.kind === "pre")
     return <PreDeparture group={group} ride={phase.ride} amAdmin={amAdmin} />;
-  return <LiveCordata group={group} ride={phase.ride} amAdmin={amAdmin} />;
+  return (
+    <LiveCordata
+      group={group}
+      ride={phase.ride}
+      amAdmin={amAdmin}
+      onStartNavigation={onStartNavigation}
+    />
+  );
 }
 
 // ─── Empty ──────────────────────────────────────────────────────────────────
@@ -324,10 +333,12 @@ function LiveCordata({
   group,
   ride,
   amAdmin,
+  onStartNavigation,
 }: {
   group: Group;
   ride: GroupRide;
   amAdmin: boolean;
+  onStartNavigation?: (mode: NavMode) => void;
 }) {
   const [view, setView] = useState<"mappa" | "piloti" | "chat">("mappa");
   const members = useQuery((db) => listGroupMembers(db, group.id));
@@ -372,6 +383,14 @@ function LiveCordata({
         <div className="mx-4 mt-1">
           <button
             type="button"
+            onClick={() =>
+              onStartNavigation?.({
+                kind: "cordata",
+                rideTitle: ride.title,
+                groupName: group.name,
+                accent: group.crestColor,
+              })
+            }
             className="flex w-full items-center justify-between rounded-xl px-4 py-3 font-display text-sm font-semibold uppercase tracking-wider"
             style={{
               background: "var(--ember)",
