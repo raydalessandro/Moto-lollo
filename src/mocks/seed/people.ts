@@ -137,7 +137,7 @@ export function seedNotifications(): Record<UUID, Notification> {
   mk("n1", "ride_reminder",  "Tra 2 giorni: Colazione in Franciacorta", "Conferma la partecipazione con il gruppo Amici.", 3, true, "gruppo.home");
   mk("n2", "like",           "Marco ha messo like", "Sul tuo percorso \"Passo del Tonale, sunrise\".", 8, true, "mondo.feed");
   mk("n3", "comment",        "Giulia ha commentato", "\"Che foto alle 6 del mattino!\"", 14, false, "mondo.feed");
-  mk("n4", "follow",         "Sofia ti segue", "Ora segue le tue uscite pubbliche.", 28, false, "mondo.profilo");
+  mk("n4", "follow",         "Sofia ti segue", "Ora segue le tue uscite pubbliche.", 28, false, "profilo");
   mk("n5", "ride_confirmed", "Uscita confermata", "Passo del Tonale, sunrise — sabato 02 maggio.", 48, false, "gruppo.home");
   mk("n6", "badge_earned",   "Badge: Weekend warrior", "Hai completato 4 weekend consecutivi in sella.", 72, false, "mondo.classifica");
   mk("n7", "like",           "3 like al tuo percorso", "Notturna dei laghi ha ricevuto altri like.", 96, false, "mondo.feed");
