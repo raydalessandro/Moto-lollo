@@ -9,7 +9,7 @@ export type ScreenKey =
   // IO
   | "io.home"
   | "io.mappa"
-  | "io.crea"
+  | "io.registra"
   | "io.garage"
   // GRUPPO
   | "gruppo.home"
@@ -43,6 +43,7 @@ const I = {
   home: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2z M9 22V12h6v10",
   map: "M9 3L3 6v15l6-3 6 3 6-3V3l-6 3z M9 3v15 M15 6v15",
   plus: "M12 5v14 M5 12h14",
+  play: "M6 3l14 9-14 9z",
   wrench:
     "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z",
   users:
@@ -67,10 +68,10 @@ export const PILLARS: Record<Pillar, PillarDef> = {
     accent: "#ff6a1f",
     defaultScreen: "io.home",
     tabs: [
-      { key: "io.home",   label: "Home",   iconPath: I.home },
-      { key: "io.mappa",  label: "Mappa",  iconPath: I.map },
-      { key: "io.crea",   label: "Crea",   iconPath: I.plus },
-      { key: "io.garage", label: "Garage", iconPath: I.wrench },
+      { key: "io.home",     label: "Home",     iconPath: I.home },
+      { key: "io.mappa",    label: "Mappa",    iconPath: I.map },
+      { key: "io.registra", label: "Registra", iconPath: I.play },
+      { key: "io.garage",   label: "Garage",   iconPath: I.wrench },
     ],
   },
   gruppo: {
