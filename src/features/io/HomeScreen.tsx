@@ -1,145 +1,509 @@
 "use client";
 
 import { Card } from "@/components/ui/Card";
-import { Stat } from "@/components/ui/Stat";
-import { Chip } from "@/components/ui/Chip";
 import { SectionLabel } from "@/components/ui/SectionLabel";
+import { Icon } from "@/components/nav/Icon";
 import { useQuery } from "@/mocks/DbProvider";
 import {
   getPrimaryMotorcycle,
   getLastActivity,
-  listUpcomingRidesFor,
   getProfile,
-  countUnreadNotifications,
+  listMyActivities,
+  listMyDocuments,
 } from "@/mocks/queries";
+import type { ScreenKey } from "@/components/nav/pillars";
+import type { Activity, Motorcycle } from "@/types/domain";
 
-function relativeDate(iso: string, nowIso: string): string {
-  const now = new Date(nowIso);
-  const then = new Date(iso);
-  const diffDays = Math.round((now.getTime() - then.getTime()) / 86_400_000);
-  if (diffDays === 0) return "Oggi";
-  if (diffDays === 1) return "Ieri";
-  if (diffDays < 7) return `${diffDays} giorni fa`;
-  if (diffDays < 30) return `${Math.round(diffDays / 7)} sett fa`;
-  return then.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
+// MOCK weather — the real provider lands much later (not in this prototype).
+const WEATHER = {
+  temp: 22,
+  cond: "Cielo coperto",
+  strada: "asciutta",
+  vento: 12,
+  visib: "buona",
+  pressione: "1018 hPa",
+  sub: "Strade asciutte. Buon momento per uscire.",
+};
+
+interface Advisory {
+  severity: "danger" | "warning";
+  text: string;
 }
 
-export function HomeScreen() {
+interface HomeScreenProps {
+  onNavigate?: (s: ScreenKey) => void;
+}
+
+export function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
   const me = useQuery((db, userId) => getProfile(db, userId));
-  const primaryBike = useQuery((db, userId) => getPrimaryMotorcycle(db, userId));
-  const lastRide = useQuery((db, userId) => getLastActivity(db, userId));
-  const upcoming = useQuery((db, userId, now) => listUpcomingRidesFor(db, userId, now, 3));
-  const unread = useQuery((db, userId) => countUnreadNotifications(db, userId));
-  const now = useQuery((_db, _userId, now) => now);
+  const primary = useQuery((db, userId) => getPrimaryMotorcycle(db, userId));
+  const last = useQuery((db, userId) => getLastActivity(db, userId));
+  const activities = useQuery((db, userId) => listMyActivities(db, userId));
+  const docs = useQuery((db, userId) => listMyDocuments(db, userId));
+  const now = useQuery((_db, _uid, now) => now);
+
+  const monthAgo = new Date(now);
+  monthAgo.setUTCDate(monthAgo.getUTCDate() - 30);
+  const monthIso = monthAgo.toISOString();
+  const monthActs = activities.filter((a) => a.startedAt >= monthIso);
+  const monthKm = Math.round(monthActs.reduce((acc, a) => acc + a.distanceKm, 0));
+
+  const advisories: Advisory[] = [];
+  for (const d of docs) {
+    const days = Math.round(
+      (new Date(d.expiresAt).getTime() - new Date(now).getTime()) / 86_400_000,
+    );
+    if (days < 0) {
+      advisories.push({
+        severity: "danger",
+        text: `${d.kind.charAt(0).toUpperCase() + d.kind.slice(1)} scaduto da ${-days} giorni`,
+      });
+    } else if (days <= 30) {
+      advisories.push({
+        severity: days <= 7 ? "danger" : "warning",
+        text: `${d.kind.charAt(0).toUpperCase() + d.kind.slice(1)} in scadenza fra ${days} giorni`,
+      });
+    }
+  }
 
   return (
-    <div className="screen-enter flex flex-col gap-6 p-5 pb-24">
-      <section>
-        <div className="flex items-baseline justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-ember">
-            ▸ Bentornato
-          </span>
-          <span className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
-            {new Date(now).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short" })}
-          </span>
+    <div className="screen-enter">
+      {/* HERO — personal cockpit */}
+      <section
+        className="relative overflow-hidden"
+        style={{ background: "linear-gradient(165deg, #1a1410 0%, #0b0a08 70%)" }}
+      >
+        <div
+          className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full opacity-30"
+          style={{ background: "radial-gradient(circle, var(--ember) 0%, transparent 70%)" }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)",
+            backgroundSize: "20px 20px",
+          }}
+        />
+
+        <div className="relative px-5 pb-6 pt-5">
+          <div className="mb-5 flex items-start justify-between">
+            <div>
+              <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.25em] text-ink-dim">
+                ▸ sessione · {new Date(now).toLocaleDateString("it-IT", { weekday: "short" })}{" "}
+                {new Date(now).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+              </p>
+              <h1 className="font-display text-3xl font-medium leading-tight tracking-tight">
+                Ciao, {me?.displayName}.
+              </h1>
+              <p className="mt-1 text-sm text-ink-soft">{WEATHER.sub}</p>
+            </div>
+            <div className="text-right">
+              <Icon
+                d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"
+                size={20}
+                className="ml-auto text-ember"
+              />
+              <p className="mt-1 font-display text-2xl tabular-nums">
+                {WEATHER.temp}°
+              </p>
+            </div>
+          </div>
+
+          {/* Odometer stats */}
+          <div className="mb-5 flex items-end border-y border-line py-3.5">
+            {[
+              { label: "km totali",    value: primary?.totalKm.toLocaleString("it-IT") ?? "—", color: undefined },
+              { label: "questo mese",  value: monthKm.toLocaleString("it-IT"), color: "var(--ember)" },
+              { label: "uscite",       value: String(monthActs.length), color: undefined },
+            ].map((s, i) => (
+              <div key={i} className="relative flex-1">
+                {i > 0 && (
+                  <span className="absolute left-0 top-1 bottom-1 w-px bg-line" />
+                )}
+                <div className="px-3">
+                  <p className="mb-1 font-mono text-[9px] uppercase tracking-widest text-ink-dim">
+                    {s.label}
+                  </p>
+                  <p
+                    className="font-display text-2xl font-medium leading-none tracking-tight tabular-nums"
+                    style={s.color ? { color: s.color } : undefined}
+                  >
+                    {s.value}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Primary CTA */}
+          <button
+            type="button"
+            onClick={() => onNavigate?.("io.registra")}
+            className="group flex w-full items-center justify-between rounded-xl px-5 py-4 transition-all active:scale-[0.99]"
+            style={{
+              background: "var(--ember)",
+              color: "var(--bg)",
+              boxShadow: "0 8px 24px rgba(255, 106, 31, 0.21)",
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-full"
+                style={{ background: "rgba(0,0,0,0.13)" }}
+              >
+                <Icon d="M6 3l14 9-14 9z" size={15} />
+              </div>
+              <div className="text-left">
+                <p className="font-mono text-xs font-medium uppercase tracking-widest opacity-70">
+                  avvia uscita
+                </p>
+                <p className="text-base font-semibold">Sono in sella</p>
+              </div>
+            </div>
+            <Icon d="M9 18l6-6-6-6" size={18} />
+          </button>
         </div>
-        <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight">
-          Ciao, {me?.displayName}.
-        </h1>
-        <p className="mt-1 text-sm text-ink-dim">
-          {upcoming.length > 0
-            ? `${upcoming.length} uscita${upcoming.length === 1 ? "" : "e"} in programma${unread > 0 ? ` · ${unread} notifiche` : ""}.`
-            : unread > 0
-              ? `${unread} notifiche non lette.`
-              : "Nessuna uscita in programma."}
-        </p>
       </section>
 
-      {primaryBike && (
-        <section>
-          <SectionLabel num="01" action="Garage">La tua moto</SectionLabel>
-          <Card>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.2em] text-ink-mute">Primaria</div>
-                <div className="mt-1 font-display text-xl font-semibold">
-                  {primaryBike.brand} {primaryBike.model}
+      <div className="space-y-6 px-4 py-5 pb-32">
+        {/* AVVISI */}
+        {advisories.length > 0 && (
+          <section>
+            <SectionLabel num="01">Attenzione</SectionLabel>
+            <div className="flex flex-col gap-1.5">
+              {advisories.map((a, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5"
+                  style={{
+                    background:
+                      a.severity === "danger"
+                        ? "rgba(209, 58, 58, 0.07)"
+                        : "rgba(200, 162, 75, 0.06)",
+                    borderLeft: `2px solid ${
+                      a.severity === "danger" ? "var(--danger)" : "var(--warn)"
+                    }`,
+                  }}
+                >
+                  <Icon
+                    d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 8v4 M12 16h.01"
+                    size={13}
+                    className={a.severity === "danger" ? "text-danger" : "text-warn"}
+                  />
+                  <p className="flex-1 text-sm">{a.text}</p>
+                  <Icon d="M9 18l6-6-6-6" size={13} className="text-ink-dim" />
                 </div>
-                <div className="text-sm text-ink-dim">
-                  {primaryBike.name} · {primaryBike.year}
-                </div>
-              </div>
-              <Stat value={primaryBike.totalKm.toLocaleString("it-IT")} unit="km" label="Totali" size="md" />
+              ))}
             </div>
-          </Card>
-        </section>
-      )}
+          </section>
+        )}
 
-      {lastRide && (
+        {/* CONDIZIONI */}
         <section>
-          <SectionLabel num="02" action="Storico">Ultima uscita</SectionLabel>
+          <SectionLabel num="02">Condizioni</SectionLabel>
           <Card>
-            <div className="flex items-baseline justify-between gap-3">
+            <div className="mb-3 flex items-center justify-between">
               <div>
-                <div className="font-display text-lg font-semibold">{lastRide.title}</div>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  {lastRide.tags.map((t) => (
-                    <Chip key={t} size="sm">#{t}</Chip>
-                  ))}
-                </div>
+                <p className="text-base font-medium">{WEATHER.cond}</p>
+                <p className="text-xs text-ink-soft">strada {WEATHER.strada}</p>
               </div>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
-                {relativeDate(lastRide.startedAt, now)}
-              </span>
+              <Icon
+                d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"
+                size={32}
+                className="text-ink-soft"
+              />
             </div>
-            <div className="mt-5 grid grid-cols-3 gap-3">
-              <Stat value={lastRide.distanceKm.toFixed(1)} unit="km" label="Distanza" />
-              <Stat value={Math.round(lastRide.durationSeconds / 60)} unit="min" label="Durata" />
-              <Stat value={Math.round(lastRide.avgSpeedKmh)} unit="km/h" label="Media" />
-            </div>
-          </Card>
-        </section>
-      )}
-
-      {upcoming.length > 0 && (
-        <section>
-          <SectionLabel num="03" action="Gruppi">In programma</SectionLabel>
-          <div className="flex flex-col gap-3">
-            {upcoming.map(({ ride, group }) => (
-              <Card key={ride.id}>
-                <div className="flex items-center justify-between gap-3">
+            <div className="grid grid-cols-3 gap-3 border-t border-line pt-3">
+              {[
+                {
+                  iconPath: "M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2 M9.6 4.6A2 2 0 1 1 11 8H2 M12.6 19.4A2 2 0 1 0 14 16H2",
+                  label: "vento",
+                  value: `${WEATHER.vento} km/h`,
+                },
+                {
+                  iconPath: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+                  label: "visibilità",
+                  value: WEATHER.visib,
+                },
+                {
+                  iconPath: "M22 7l-9 9-4-4-7 7 M16 7h6v6",
+                  label: "pressione",
+                  value: WEATHER.pressione,
+                },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Icon d={item.iconPath} size={12} className="text-ink-dim" />
                   <div>
-                    <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-ink-mute">
-                      <span
-                        className="inline-block h-2 w-2 rounded-full"
-                        style={{ background: group?.crestColor }}
-                      />
-                      {group?.name}
-                    </div>
-                    <div className="mt-1 font-display text-base font-semibold">{ride.title}</div>
-                    <div className="text-sm text-ink-dim">{ride.meetupText}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-mono text-sm text-ink">
-                      {new Date(ride.startAt).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit" })}
-                    </div>
-                    <div className="font-mono text-[11px] text-ember">
-                      {new Date(ride.startAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
-                    </div>
+                    <p className="font-mono text-[9px] uppercase tracking-wider text-ink-dim">
+                      {item.label}
+                    </p>
+                    <p className="font-mono text-xs tabular-nums">{item.value}</p>
                   </div>
                 </div>
-                <div className="mt-3 flex items-center justify-between text-[11px] text-ink-dim">
-                  <span>{ride.distanceKm > 0 ? `${ride.distanceKm} km` : "Pista"}</span>
-                  <span>
-                    <span className="text-ember">{ride.confirmedCount}</span>/{ride.invitedCount} confermati
-                  </span>
-                  <Chip size="sm" active={ride.status === "confermata"}>{ride.status}</Chip>
-                </div>
-              </Card>
+              ))}
+            </div>
+          </Card>
+        </section>
+
+        {/* SCORCIATOIE */}
+        <section>
+          <SectionLabel num="03">Scorciatoie</SectionLabel>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              {
+                label: "Trova benzina",
+                iconPath:
+                  "M3 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18 M2 22h14 M4 11h10 M15 6l3 3v9a2 2 0 0 0 4 0V10.83a2 2 0 0 0-.59-1.42L18 6z",
+                onClick: () => {},
+              },
+              {
+                label: "Percorso casuale",
+                iconPath:
+                  "M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M6 17c5 0 6-5 12-5 M6 15V7a2 2 0 0 1 2-2h4 M18 9v8a2 2 0 0 1-2 2h-4",
+                onClick: () => onNavigate?.("io.registra"),
+              },
+              {
+                label: "Torna a casa",
+                iconPath: "M3 11l19-9-9 19-2-8z",
+                onClick: () => {},
+              },
+              {
+                label: "Ultime tracce",
+                iconPath:
+                  "M5 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M5 15l3-7 4 7 3-7h-3 M15 8h3",
+                onClick: () => onNavigate?.("io.garage"),
+              },
+            ].map((s) => (
+              <button
+                key={s.label}
+                type="button"
+                onClick={s.onClick}
+                className="flex flex-col items-start gap-6 rounded-xl border border-line bg-panel p-3 text-left transition-opacity hover:opacity-90"
+              >
+                <Icon d={s.iconPath} size={16} className="text-ember" />
+                <span className="text-sm">{s.label}</span>
+              </button>
             ))}
           </div>
         </section>
-      )}
+
+        {/* ULTIMA USCITA */}
+        {last && (
+          <section>
+            <SectionLabel
+              num="04"
+              action="storico"
+              onAction={() => onNavigate?.("io.garage")}
+            >
+              Ultima uscita
+            </SectionLabel>
+            <Card className="!p-0 overflow-hidden">
+              <MiniMap seed={last.polylineSeed ?? 1} height={96} />
+              <div className="p-4">
+                <div className="mb-3 flex items-start justify-between">
+                  <div>
+                    <p className="text-base font-medium">{last.title}</p>
+                    <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-ink-dim">
+                      {new Date(last.startedAt).toLocaleDateString("it-IT", {
+                        weekday: "short",
+                        day: "2-digit",
+                        month: "short",
+                      })}
+                    </p>
+                  </div>
+                  <Icon d="M9 18l6-6-6-6" size={16} className="text-ink-dim" />
+                </div>
+                <div className="grid grid-cols-4 gap-3 border-t border-line pt-3">
+                  {[
+                    { label: "km",     value: last.distanceKm.toFixed(1) },
+                    { label: "durata", value: formatDuration(last.durationSeconds) },
+                    { label: "v.max",  value: String(Math.round(last.maxSpeedKmh)) },
+                    { label: "d+",     value: last.elevationGainM ? `${last.elevationGainM}` : "—" },
+                  ].map((m, i) => (
+                    <div key={i}>
+                      <p className="font-mono text-[9px] uppercase tracking-wider text-ink-dim">
+                        {m.label}
+                      </p>
+                      <p className="font-display text-base tabular-nums">{m.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </section>
+        )}
+
+        {/* MOTO */}
+        {primary && (
+          <section>
+            <SectionLabel
+              num="05"
+              action="garage"
+              onAction={() => onNavigate?.("io.garage")}
+            >
+              Moto
+            </SectionLabel>
+            <BikeCard bike={primary} lastActivity={last} />
+          </section>
+        )}
+      </div>
     </div>
   );
+}
+
+function BikeCard({ bike, lastActivity }: { bike: Motorcycle; lastActivity?: Activity }) {
+  // Mock oil-change progress: target every 3500 km. Recompute from totalKm.
+  const interval = 3500;
+  const sinceLast = bike.totalKm % interval;
+  const pct = Math.min(100, Math.round((sinceLast / interval) * 100));
+  const isWarn = pct >= 85;
+
+  return (
+    <Card>
+      <div className="flex items-start gap-4">
+        <div className="relative">
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-xl border border-line"
+            style={{ background: "var(--bg)" }}
+          >
+            <Icon
+              d="M5 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M5 15l3-7 4 7 3-7h-3 M15 8h3"
+              size={28}
+              className="text-ember"
+            />
+          </div>
+          <span
+            className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full"
+            style={{ background: "var(--ember)" }}
+          >
+            <span className="font-mono text-[8px] font-bold" style={{ color: "var(--bg)" }}>
+              1
+            </span>
+          </span>
+        </div>
+        <div className="flex-1">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-ink-dim">
+            {bike.brand} · {bike.year ?? "—"}
+          </p>
+          <p className="mt-0.5 text-lg font-medium leading-tight">
+            {bike.brand} {bike.model}
+          </p>
+          <p className="text-xs text-ink-soft">«{bike.name}»</p>
+
+          <div className="mt-3 flex items-baseline gap-1">
+            <p className="font-display text-2xl font-medium leading-none tracking-tight tabular-nums">
+              {bike.totalKm.toLocaleString("it-IT")}
+            </p>
+            <span className="text-xs text-ink-dim">km totali</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 border-t border-line pt-3">
+        <div className="mb-1.5 flex justify-between">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-ink-dim">
+            prossimo cambio olio
+          </span>
+          <span
+            className="font-mono text-[10px] tabular-nums"
+            style={{ color: isWarn ? "var(--warn)" : "var(--ink-dim)" }}
+          >
+            {sinceLast.toLocaleString("it-IT")} / {interval.toLocaleString("it-IT")} km
+          </span>
+        </div>
+        <div className="h-1 w-full overflow-hidden rounded-full bg-line">
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${pct}%`,
+              background: isWarn ? "var(--warn)" : "var(--ember)",
+            }}
+          />
+        </div>
+      </div>
+
+      {lastActivity?.motorcycleId === bike.id && (
+        <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-ink-mute">
+          ultima uscita su questa moto
+        </p>
+      )}
+    </Card>
+  );
+}
+
+/** Procedural mini-map polyline based on a seed. SVG only, no map tiles. */
+function MiniMap({ seed, height = 96 }: { seed: number; height?: number }) {
+  // Simple deterministic PRNG to lay out a polyline.
+  let s = seed >>> 0;
+  const next = () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const points: string[] = [];
+  const N = 14;
+  const W = 320;
+  const H = height;
+  let x = 16;
+  let y = H / 2 + (next() - 0.5) * H * 0.4;
+  points.push(`${x},${y}`);
+  for (let i = 1; i < N; i++) {
+    x += (W - 32) / (N - 1);
+    y = Math.max(12, Math.min(H - 12, y + (next() - 0.5) * H * 0.5));
+    points.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+  }
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      className="h-full w-full"
+      style={{ background: "linear-gradient(180deg, #120e0a 0%, #060503 100%)" }}
+    >
+      {[0.25, 0.5, 0.75].map((t) => (
+        <line
+          key={t}
+          x1={0}
+          x2={W}
+          y1={H * t}
+          y2={H * t}
+          stroke="rgba(255,255,255,0.04)"
+          strokeWidth={1}
+        />
+      ))}
+      <polyline
+        points={points.join(" ")}
+        fill="none"
+        stroke="var(--ember)"
+        strokeWidth={3}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <circle
+        cx={parseFloat(points[0].split(",")[0])}
+        cy={parseFloat(points[0].split(",")[1])}
+        r={4}
+        fill="var(--ink)"
+        stroke="var(--bg)"
+        strokeWidth={2}
+      />
+      <circle
+        cx={parseFloat(points[points.length - 1].split(",")[0])}
+        cy={parseFloat(points[points.length - 1].split(",")[1])}
+        r={4}
+        fill="var(--ember)"
+        stroke="var(--bg)"
+        strokeWidth={2}
+      />
+    </svg>
+  );
+}
+
+function formatDuration(seconds: number): string {
+  const totalMin = Math.round(seconds / 60);
+  if (totalMin < 60) return `${totalMin}m`;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${h}h ${m.toString().padStart(2, "0")}`;
 }
