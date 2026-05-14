@@ -29,9 +29,8 @@ import { DiarioScreen } from "@/features/gruppo/DiarioScreen";
 import { FeedScreen } from "@/features/mondo/FeedScreen";
 import { EventiScreen } from "@/features/mondo/EventiScreen";
 import { ClassificaScreen } from "@/features/mondo/ClassificaScreen";
-// ProfiloScreen lives in features/mondo for now but is no longer a MONDO tab.
-// Reachable through the hamburger drawer (DrawerOverlay below).
-import { ProfiloScreen } from "@/features/mondo/ProfiloScreen";
+// Profilo is no longer a MONDO tab — reachable only through the hamburger drawer.
+import { ProfiloScreen } from "@/features/profilo/ProfiloScreen";
 
 type Overlay = null | { kind: "profilo" } | { kind: "impostazioni" } | { kind: "privacy" };
 
@@ -421,7 +420,9 @@ function SettingsPlaceholder() {
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight">
           Preferenze
         </h1>
-        <p className="mt-1 text-sm text-ink-dim">Da costruire nello Step 15.</p>
+        <p className="mt-1 text-sm text-ink-dim">
+          Placeholder. Le voci sotto sono quelle che vivranno qui.
+        </p>
       </section>
       <ul className="flex flex-col gap-2 rounded-xl border border-line bg-panel p-4 text-sm text-ink-soft">
         {[
@@ -452,7 +453,9 @@ function PrivacyPlaceholder() {
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight">
           I tuoi dati
         </h1>
-        <p className="mt-1 text-sm text-ink-dim">Da costruire nello Step 15.</p>
+        <p className="mt-1 text-sm text-ink-dim">
+          Placeholder. Le voci sotto sono quelle che vivranno qui.
+        </p>
       </section>
       <ul className="flex flex-col gap-2 rounded-xl border border-line bg-panel p-4 text-sm text-ink-soft">
         {[
