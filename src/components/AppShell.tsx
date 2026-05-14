@@ -27,6 +27,8 @@ import { DiarioScreen } from "@/features/gruppo/DiarioScreen";
 import { FeedScreen } from "@/features/mondo/FeedScreen";
 import { EventiScreen } from "@/features/mondo/EventiScreen";
 import { ClassificaScreen } from "@/features/mondo/ClassificaScreen";
+// ProfiloScreen lives in features/mondo for now but is no longer a MONDO tab.
+// Reachable through the hamburger drawer (DrawerOverlay below).
 import { ProfiloScreen } from "@/features/mondo/ProfiloScreen";
 
 type Overlay = null | { kind: "profilo" } | { kind: "impostazioni" } | { kind: "privacy" };
@@ -81,8 +83,6 @@ export function AppShell() {
         return <EventiScreen />;
       case "mondo.classifica":
         return <ClassificaScreen />;
-      case "mondo.profilo":
-        return <ProfiloScreen />;
     }
   };
 

@@ -20,8 +20,7 @@ export type ScreenKey =
   // MONDO
   | "mondo.feed"
   | "mondo.eventi"
-  | "mondo.classifica"
-  | "mondo.profilo";
+  | "mondo.classifica";
 
 export interface TabDef {
   key: ScreenKey;
@@ -98,7 +97,6 @@ export const PILLARS: Record<Pillar, PillarDef> = {
       { key: "mondo.feed",       label: "Feed",     iconPath: I.feed },
       { key: "mondo.eventi",     label: "Eventi",   iconPath: I.calendar },
       { key: "mondo.classifica", label: "Classif.", iconPath: I.trophy },
-      { key: "mondo.profilo",    label: "Profilo",  iconPath: I.user },
     ],
   },
 };
