@@ -4,8 +4,13 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Icon } from "@/components/nav/Icon";
+import type { NavMode } from "@/components/nav/NavigationOverlay";
 
 type Mode = "hub" | "manuale" | "gps" | "gpx" | "naviga";
+
+interface RegistraScreenProps {
+  onStartNavigation?: (mode: NavMode) => void;
+}
 
 interface ModeDef {
   key: Exclude<Mode, "hub">;
@@ -56,12 +61,30 @@ const MODES: ModeDef[] = [
   },
 ];
 
-export function RegistraScreen() {
+export function RegistraScreen({ onStartNavigation }: RegistraScreenProps = {}) {
   const [mode, setMode] = useState<Mode>("hub");
 
   if (mode !== "hub") {
     const def = MODES.find((m) => m.key === mode)!;
-    return <ModeDetail mode={def} onBack={() => setMode("hub")} />;
+    return (
+      <ModeDetail
+        mode={def}
+        onBack={() => setMode("hub")}
+        onStart={() => {
+          if (!onStartNavigation) return;
+          if (def.key === "gps") {
+            onStartNavigation({ kind: "tracking", title: "Uscita libera" });
+          } else if (def.key === "naviga") {
+            onStartNavigation({ kind: "navigation", destination: "Passo del Tonale" });
+          } else if (def.key === "manuale") {
+            // Manual editor opens fullscreen tracking-style for now.
+            onStartNavigation({ kind: "tracking", title: "Editor percorso" });
+          } else {
+            // GPX: stays as a placeholder.
+          }
+        }}
+      />
+    );
   }
 
   return (
@@ -127,9 +150,10 @@ export function RegistraScreen() {
 interface ModeDetailProps {
   mode: ModeDef;
   onBack: () => void;
+  onStart: () => void;
 }
 
-function ModeDetail({ mode, onBack }: ModeDetailProps) {
+function ModeDetail({ mode, onBack, onStart }: ModeDetailProps) {
   return (
     <div className="screen-enter flex flex-col gap-6 p-5 pb-24">
       <section>
@@ -171,6 +195,7 @@ function ModeDetail({ mode, onBack }: ModeDetailProps) {
       <section>
         <button
           type="button"
+          onClick={onStart}
           className="w-full rounded-xl border border-ember bg-ember/10 px-4 py-3 font-display text-sm font-semibold uppercase tracking-wider text-ember transition-colors hover:bg-ember/15"
         >
           {mode.key === "gps" || mode.key === "naviga" ? "Avvia ora" : "Apri editor"}
