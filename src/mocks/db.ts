@@ -9,11 +9,15 @@ import type {
   PlannedRoute,
   Group,
   GroupMembership,
+  GroupMembershipRequest,
   GroupRide,
   GroupRideRSVP,
+  RouteProposal,
+  RideBoardComment,
   PublishedRoute,
   RouteComment,
   RouteLike,
+  SavedRoute,
   FollowRelationship,
   PublicEvent,
   EventRSVP,
@@ -64,6 +68,12 @@ import {
   seedUserBadges,
   seedChallenges,
 } from "./seed/mondo";
+import {
+  seedSavedRoutes,
+  seedRouteProposals,
+  seedMembershipRequests,
+  seedRideBoardComments,
+} from "./seed/moderation";
 
 export interface Db {
   profiles: Record<UUID, Profile>;
@@ -76,11 +86,15 @@ export interface Db {
   plannedRoutes: Record<UUID, PlannedRoute>;
   groups: Record<UUID, Group>;
   groupMemberships: Record<UUID, GroupMembership>;
+  groupMembershipRequests: Record<UUID, GroupMembershipRequest>;
   groupRides: Record<UUID, GroupRide>;
   groupRideRSVPs: Record<UUID, GroupRideRSVP>;
+  routeProposals: Record<UUID, RouteProposal>;
+  rideBoardComments: Record<UUID, RideBoardComment>;
   publishedRoutes: Record<UUID, PublishedRoute>;
   routeComments: Record<UUID, RouteComment>;
   routeLikes: Record<UUID, RouteLike>;
+  savedRoutes: Record<UUID, SavedRoute>;
   followRelationships: Record<UUID, FollowRelationship>;
   events: Record<UUID, PublicEvent>;
   eventRSVPs: Record<UUID, EventRSVP>;
@@ -106,11 +120,15 @@ export function seedDb(): Db {
     plannedRoutes: seedPlannedRoutes(),
     groups: seedGroups(),
     groupMemberships: seedMemberships(),
+    groupMembershipRequests: seedMembershipRequests(),
     groupRides: seedGroupRides(),
     groupRideRSVPs: seedRSVPs(),
+    routeProposals: seedRouteProposals(),
+    rideBoardComments: seedRideBoardComments(),
     publishedRoutes: seedPublishedRoutes(),
     routeComments: seedRouteComments(),
     routeLikes: seedRouteLikes(),
+    savedRoutes: seedSavedRoutes(),
     followRelationships: seedFollows(),
     events: seedEvents(),
     eventRSVPs: seedEventRSVPs(),
