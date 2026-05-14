@@ -60,7 +60,7 @@ export function AppShell() {
   const renderScreen = (): React.ReactNode => {
     switch (screen) {
       case "io.home":
-        return <HomeScreen />;
+        return <HomeScreen onNavigate={setScreen} />;
       case "io.mappa":
         return <MappaScreen />;
       case "io.registra":
