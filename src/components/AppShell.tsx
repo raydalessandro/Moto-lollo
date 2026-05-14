@@ -5,6 +5,7 @@ import { Header } from "./nav/Header";
 import { BottomNav } from "./nav/BottomNav";
 import { HamburgerDrawer, type DrawerDestination } from "./nav/HamburgerDrawer";
 import { NavigationOverlay, type NavMode } from "./nav/NavigationOverlay";
+import { GroupPickerOverlay } from "./nav/GroupPickerOverlay";
 import {
   PILLARS,
   pillarOf,
@@ -48,6 +49,7 @@ export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [exploreOpen, setExploreOpen] = useState(false);
+  const [groupPickerOpen, setGroupPickerOpen] = useState(false);
   const [navMode, setNavMode] = useState<NavMode | null>(null);
 
   const pillar: Pillar = pillarOf(screen);
@@ -101,16 +103,8 @@ export function AppShell() {
         currentGroup={currentGroup}
         onOpenMenu={() => setDrawerOpen(true)}
         onPillarChange={handlePillarChange}
+        onLongPressGruppo={() => setGroupPickerOpen(true)}
       />
-      {pillar === "gruppo" && (
-        <GroupSelector
-          groups={myGroups}
-          currentGroup={currentGroup}
-          currentGroupId={currentGroup.id}
-          onChange={setCurrentGroupId}
-          onExplore={() => setExploreOpen(true)}
-        />
-      )}
       <main key={screen} className="flex-1 overflow-y-auto scrollbar-hide">
         {renderScreen()}
       </main>
@@ -129,6 +123,22 @@ export function AppShell() {
 
       {overlay && <DrawerOverlay overlay={overlay} onClose={() => setOverlay(null)} />}
 
+      <GroupPickerOverlay
+        open={groupPickerOpen}
+        groups={myGroups}
+        currentGroupId={currentGroup.id}
+        onPick={(gid) => {
+          setCurrentGroupId(gid);
+          setScreen("gruppo.home");
+          setGroupPickerOpen(false);
+        }}
+        onExplore={() => {
+          setGroupPickerOpen(false);
+          setExploreOpen(true);
+        }}
+        onClose={() => setGroupPickerOpen(false)}
+      />
+
       {exploreOpen && (
         <ExploreGroupsOverlay
           myGroups={myGroups}
@@ -146,86 +156,6 @@ export function AppShell() {
       {navMode && (
         <NavigationOverlay mode={navMode} onClose={() => setNavMode(null)} />
       )}
-    </div>
-  );
-}
-
-interface GroupSelectorProps {
-  groups: ReturnType<typeof listMyGroups>;
-  currentGroup: Group;
-  currentGroupId: string;
-  onChange: (id: string) => void;
-  onExplore: () => void;
-}
-
-function GroupSelector({
-  groups,
-  currentGroup,
-  currentGroupId,
-  onChange,
-  onExplore,
-}: GroupSelectorProps) {
-  // When currentGroup is NOT in my groups (we entered through Esplora), show
-  // it as the active chip prepended so the user understands the context.
-  const inMyGroups = groups.some((g) => g.id === currentGroupId);
-  return (
-    <div className="shrink-0 border-b border-line bg-bg px-3 py-2">
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-        {!inMyGroups && (
-          <button
-            type="button"
-            disabled
-            className="flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5"
-            style={{
-              borderColor: currentGroup.crestColor,
-              background: `${currentGroup.crestColor}15`,
-              color: currentGroup.crestColor,
-            }}
-          >
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ background: currentGroup.crestColor }}
-            />
-            <span className="text-[11px] font-medium uppercase tracking-wider">
-              {currentGroup.name}
-            </span>
-            <span className="font-mono text-[9px] uppercase tracking-widest opacity-70">
-              · ospite
-            </span>
-          </button>
-        )}
-        {groups.map((g) => {
-          const isActive = g.id === currentGroupId;
-          return (
-            <button
-              key={g.id}
-              type="button"
-              onClick={() => onChange(g.id)}
-              className="flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 transition-colors"
-              style={{
-                borderColor: isActive ? g.crestColor : "var(--line)",
-                background: isActive ? `${g.crestColor}15` : "var(--panel)",
-                color: isActive ? g.crestColor : "var(--ink-dim)",
-              }}
-            >
-              <span
-                className="inline-block h-2 w-2 rounded-full"
-                style={{ background: g.crestColor }}
-              />
-              <span className="text-[11px] font-medium uppercase tracking-wider">
-                {g.name}
-              </span>
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          onClick={onExplore}
-          className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-line bg-bg px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-ink-dim transition-colors hover:border-ember/60 hover:text-ember"
-        >
-          + esplora
-        </button>
-      </div>
     </div>
   );
 }

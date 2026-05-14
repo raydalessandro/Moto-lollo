@@ -14,7 +14,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Versioning [Se
   - **Eventi** e **Classifica** vivono come destinazioni del drawer hamburger.
 - **Pillar switcher rimosso** dalla bottom nav. Il toggle IO↔GRUPPO è ora **compatto nell'Header** (pillola segmentata a 2 sezioni).
 - **Bottom nav semplificata**: una sola riga di tab del pillar attivo (no più switcher orizzontale sopra).
-- **Home pulita**: rimosso il carosello "I miei percorsi salvati" (già in `io.mappa`). 4 azioni Registra/Crea/Naviga/Carica GPX tornano a essere bottoni quadrati verticali (icona in alto, label sotto), aspect 1:1.
+- **Group switcher**: il chip strip orizzontale sopra il pillar GRUPPO è stato eliminato. Lo switch tra i miei gruppi avviene tramite **long-press sul toggle "GRUPPO"** nell'Header → apre un bottom-sheet `GroupPickerOverlay` con i miei gruppi + "Esplora altri". Una freccetta ▾ vicino al testo "GRUPPO" suggerisce la funzione.
+- **Home pulita**: rimosso il carosello "I miei percorsi salvati" (già in `io.mappa`). 4 azioni Registra/Crea/Naviga/Carica GPX in grid 2×2 che si distribuisce nello spazio rimanente (no più aspect-square rigido).
 - **`io.registra` eliminato**: le 4 modalità vivono solo come azioni della Home, aprono direttamente l'overlay fullscreen.
 
 ### In arrivo

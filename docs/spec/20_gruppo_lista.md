@@ -1,14 +1,23 @@
-# 20 · gruppo.lista — Esplora gruppi + profilo non-membro
+# 20 · Picker gruppi (long-press) + Esplora
 
 ## Purpose
 
-Schermo per scoprire gruppi pubblici e gestire l'appartenenza ai propri. Non è una tab "dura" del pillar GRUPPO: vive come **overlay** che si apre tappando il bottone "+ esplora" nel chip strip sopra il pillar.
+Due overlay per lavorare con i gruppi:
 
-File implementazione: `src/components/AppShell.tsx` → componente `ExploreGroupsOverlay`.
+1. **GroupPickerOverlay** — bottom sheet che si apre su **long-press** del toggle "GRUPPO" nell'Header. Mostra i miei gruppi + voce "Esplora altri".
+2. **ExploreGroupsOverlay** — fullscreen overlay per scoprire gruppi pubblici (i miei + altri). Si apre da: dentro il GroupPickerOverlay (voce "Esplora altri"), oppure quando un nuovo utente non ha gruppi ancora.
 
-Quando l'utente tap su un gruppo nell'overlay, succede una di due cose:
-- **Gruppo a cui appartiene**: cambia il contesto del pillar a quel gruppo
-- **Gruppo a cui NON appartiene**: cambia il contesto, va su `gruppo.home`, ma in versione "profilo gruppo non-membro" (vedi `21_gruppo_home.md`)
+File implementazioni:
+- `src/components/nav/GroupPickerOverlay.tsx` (picker veloce)
+- `src/components/AppShell.tsx` → componente `ExploreGroupsOverlay` (esplora full)
+
+Quando l'utente tap su un gruppo nell'overlay:
+- **Gruppo a cui appartiene**: cambia il contesto del pillar + va a `gruppo.home`
+- **Gruppo a cui NON appartiene**: come sopra, ma in versione "profilo gruppo non-membro" (vedi `21_gruppo_home.md`)
+
+## Storia IA
+
+Originariamente i miei gruppi vivevano come **chip strip orizzontale** sopra il pillar GRUPPO (sotto l'Header). È stato eliminato per recuperare verticale: lo switch tra i miei gruppi avviene ora tramite **long-press sul toggle GRUPPO** nell'Header. Una piccola freccetta ▾ indica la presenza del menu quando il toggle è attivo.
 
 ---
 

@@ -162,8 +162,8 @@ export function HomeScreen({ onNavigate, onStartNavigation }: HomeScreenProps = 
       )}
 
       {/* Quick actions 2x2 — direct entries to the navigation overlay */}
-      <section className="flex flex-1 flex-col justify-center px-4 py-4">
-        <div className="grid grid-cols-2 gap-3">
+      <section className="flex flex-1 flex-col px-4 py-3">
+        <div className="grid h-full grid-cols-2 grid-rows-2 gap-3">
           <QuickAction
             label="Registra"
             sub="mentre guidi"
@@ -221,7 +221,7 @@ function QuickAction({ label, sub, iconPath, highlight, onClick }: QuickActionPr
     <button
       type="button"
       onClick={onClick}
-      className="flex aspect-square flex-col justify-between rounded-xl border bg-panel p-4 text-left transition-all active:scale-[0.98]"
+      className="flex min-h-0 flex-col justify-between rounded-xl border bg-panel p-3 text-left transition-all active:scale-[0.98]"
       style={{
         borderColor: highlight ? "var(--ember)" : "var(--line)",
         background: highlight ? "rgba(255, 106, 31, 0.06)" : "var(--panel)",
@@ -229,14 +229,14 @@ function QuickAction({ label, sub, iconPath, highlight, onClick }: QuickActionPr
     >
       <Icon
         d={iconPath}
-        size={20}
+        size={18}
         className={highlight ? "text-ember" : "text-ink"}
       />
       <div>
-        <p className="font-display text-base font-semibold leading-tight">
+        <p className="font-display text-sm font-semibold leading-tight">
           {label}
         </p>
-        <p className="mt-0.5 font-mono text-[10px] uppercase tracking-widest text-ink-dim">
+        <p className="mt-0.5 font-mono text-[9px] uppercase tracking-widest text-ink-dim">
           {sub}
         </p>
       </div>
