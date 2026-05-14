@@ -342,26 +342,7 @@ export interface EventRSVP {
   respondedAt: ISODate;
 }
 
-// ─── Classifica / Segments ──────────────────────────────────────────────────
-
-export interface Segment {
-  id: UUID;
-  title: string;
-  area: string;
-  distanceKm: number;
-  elevationGainM: number;
-  surface: "asfalto" | "misto" | "sterrato";
-  createdAt: ISODate;
-}
-
-export interface SegmentAttempt {
-  id: UUID;
-  segmentId: UUID;
-  userId: UUID;
-  activityId: UUID;
-  durationSeconds: number;
-  attemptedAt: ISODate;
-}
+// ─── Classifica / Badges ────────────────────────────────────────────────────
 
 export interface Badge {
   id: UUID;
@@ -377,17 +358,6 @@ export interface UserBadge {
   userId: UUID;
   badgeId: UUID;
   earnedAt: ISODate;
-}
-
-export interface Challenge {
-  id: UUID;
-  title: string;
-  description: string;
-  startAt: ISODate;
-  endAt: ISODate;
-  targetKm?: number;
-  targetElevationM?: number;
-  participantsCount: number;
 }
 
 // ─── Safety ─────────────────────────────────────────────────────────────────
