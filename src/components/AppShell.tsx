@@ -11,7 +11,8 @@ import {
   type ScreenKey,
 } from "./nav/pillars";
 import { useQuery } from "@/mocks/DbProvider";
-import { listMyGroups } from "@/mocks/queries";
+import { listMyGroups, listOtherGroups, listAllGroups } from "@/mocks/queries";
+import type { Group } from "@/types/domain";
 
 import { HomeScreen } from "@/features/io/HomeScreen";
 import { MappaScreen } from "@/features/io/MappaScreen";
@@ -35,13 +36,20 @@ type Overlay = null | { kind: "profilo" } | { kind: "impostazioni" } | { kind: "
 
 export function AppShell() {
   const myGroups = useQuery((db, userId) => listMyGroups(db, userId));
+  const otherGroups = useQuery((db, userId) => listOtherGroups(db, userId));
+  const allGroups = useQuery((db) => listAllGroups(db));
   const [screen, setScreen] = useState<ScreenKey>("io.home");
   const [currentGroupId, setCurrentGroupId] = useState<string>(myGroups[0]?.id ?? "g1");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [overlay, setOverlay] = useState<Overlay>(null);
+  const [exploreOpen, setExploreOpen] = useState(false);
 
   const pillar: Pillar = pillarOf(screen);
-  const currentGroup = myGroups.find((g) => g.id === currentGroupId) ?? myGroups[0];
+  // currentGroup can now be a group I'm NOT a member of (after discovery
+  // tap). Fall back to listAllGroups so the lookup never returns undefined.
+  const currentGroup =
+    allGroups.find((g) => g.id === currentGroupId) ?? myGroups[0];
+  const isMemberOfCurrent = myGroups.some((g) => g.id === currentGroup.id);
 
   const handlePillarChange = (p: Pillar) => {
     if (p !== pillar) {
@@ -68,7 +76,7 @@ export function AppShell() {
       case "io.garage":
         return <GarageScreen />;
       case "gruppo.home":
-        return <GruppoHomeScreen group={currentGroup} />;
+        return <GruppoHomeScreen group={currentGroup} isMember={isMemberOfCurrent} />;
       case "gruppo.pianifica":
         return <PianificaScreen />;
       case "gruppo.cordata":
@@ -96,8 +104,10 @@ export function AppShell() {
       {pillar === "gruppo" && (
         <GroupSelector
           groups={myGroups}
+          currentGroup={currentGroup}
           currentGroupId={currentGroup.id}
           onChange={setCurrentGroupId}
+          onExplore={() => setExploreOpen(true)}
         />
       )}
       <main key={screen} className="flex-1 overflow-y-auto scrollbar-hide">
@@ -118,20 +128,68 @@ export function AppShell() {
       />
 
       {overlay && <DrawerOverlay overlay={overlay} onClose={() => setOverlay(null)} />}
+
+      {exploreOpen && (
+        <ExploreGroupsOverlay
+          myGroups={myGroups}
+          otherGroups={otherGroups}
+          currentGroupId={currentGroup.id}
+          onPick={(gid) => {
+            setCurrentGroupId(gid);
+            setScreen("gruppo.home");
+            setExploreOpen(false);
+          }}
+          onClose={() => setExploreOpen(false)}
+        />
+      )}
     </div>
   );
 }
 
 interface GroupSelectorProps {
   groups: ReturnType<typeof listMyGroups>;
+  currentGroup: Group;
   currentGroupId: string;
   onChange: (id: string) => void;
+  onExplore: () => void;
 }
 
-function GroupSelector({ groups, currentGroupId, onChange }: GroupSelectorProps) {
+function GroupSelector({
+  groups,
+  currentGroup,
+  currentGroupId,
+  onChange,
+  onExplore,
+}: GroupSelectorProps) {
+  // When currentGroup is NOT in my groups (we entered through Esplora), show
+  // it as the active chip prepended so the user understands the context.
+  const inMyGroups = groups.some((g) => g.id === currentGroupId);
   return (
     <div className="shrink-0 border-b border-line bg-bg px-3 py-2">
       <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+        {!inMyGroups && (
+          <button
+            type="button"
+            disabled
+            className="flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5"
+            style={{
+              borderColor: currentGroup.crestColor,
+              background: `${currentGroup.crestColor}15`,
+              color: currentGroup.crestColor,
+            }}
+          >
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ background: currentGroup.crestColor }}
+            />
+            <span className="text-[11px] font-medium uppercase tracking-wider">
+              {currentGroup.name}
+            </span>
+            <span className="font-mono text-[9px] uppercase tracking-widest opacity-70">
+              · ospite
+            </span>
+          </button>
+        )}
         {groups.map((g) => {
           const isActive = g.id === currentGroupId;
           return (
@@ -156,8 +214,158 @@ function GroupSelector({ groups, currentGroupId, onChange }: GroupSelectorProps)
             </button>
           );
         })}
+        <button
+          type="button"
+          onClick={onExplore}
+          className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-line bg-bg px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-ink-dim transition-colors hover:border-ember/60 hover:text-ember"
+        >
+          + esplora
+        </button>
       </div>
     </div>
+  );
+}
+
+interface ExploreGroupsOverlayProps {
+  myGroups: Group[];
+  otherGroups: Group[];
+  currentGroupId: string;
+  onPick: (groupId: string) => void;
+  onClose: () => void;
+}
+
+function ExploreGroupsOverlay({
+  myGroups,
+  otherGroups,
+  currentGroupId,
+  onPick,
+  onClose,
+}: ExploreGroupsOverlayProps) {
+  return (
+    <div className="screen-enter absolute inset-0 z-40 flex flex-col bg-bg">
+      <header className="flex shrink-0 items-center justify-between border-b border-line bg-panel/90 px-5 py-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="font-mono text-[10px] uppercase tracking-widest text-ink-dim hover:text-ink"
+        >
+          ← chiudi
+        </button>
+        <span className="font-display text-sm uppercase tracking-[0.2em] text-ink">
+          Esplora gruppi
+        </span>
+        <span className="w-12" />
+      </header>
+      <main className="flex-1 overflow-y-auto scrollbar-hide">
+        <div className="flex flex-col gap-6 p-5 pb-24">
+          {myGroups.length > 0 && (
+            <section>
+              <div className="mb-3 flex items-baseline justify-between">
+                <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-soft">
+                  ▸ I tuoi gruppi
+                </span>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
+                  {myGroups.length}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {myGroups.map((g) => (
+                  <GroupRow
+                    key={g.id}
+                    group={g}
+                    isMember
+                    isCurrent={g.id === currentGroupId}
+                    onClick={() => onPick(g.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section>
+            <div className="mb-3 flex items-baseline justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-soft">
+                ▸ Scopri altri
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
+                {otherGroups.length} pubblici
+              </span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {otherGroups.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-line bg-panel/60 p-6 text-center text-sm text-ink-dim">
+                  Sei già membro di tutti i gruppi che conosciamo.
+                </div>
+              ) : (
+                otherGroups.map((g) => (
+                  <GroupRow
+                    key={g.id}
+                    group={g}
+                    isMember={false}
+                    isCurrent={false}
+                    onClick={() => onPick(g.id)}
+                  />
+                ))
+              )}
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function GroupRow({
+  group,
+  isMember,
+  isCurrent,
+  onClick,
+}: {
+  group: Group;
+  isMember: boolean;
+  isCurrent: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-xl border bg-panel p-3 text-left transition-colors hover:border-line-soft"
+      style={{
+        borderColor: isCurrent ? group.crestColor : "var(--line)",
+        background: isCurrent ? `${group.crestColor}10` : "var(--panel)",
+      }}
+    >
+      <div
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border font-display text-[11px] font-semibold uppercase"
+        style={{
+          background: `${group.crestColor}22`,
+          color: group.crestColor,
+          borderColor: `${group.crestColor}55`,
+        }}
+      >
+        {group.tag}
+      </div>
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span className="font-display text-base font-semibold">{group.name}</span>
+          {isMember && (
+            <span
+              className="font-mono text-[9px] uppercase tracking-widest"
+              style={{ color: group.crestColor }}
+            >
+              · membro
+            </span>
+          )}
+        </div>
+        <div className="text-[11px] text-ink-dim">
+          {group.area ?? "—"} · {group.membersCount} membri · {group.publicRoutesCount} percorsi pubblici
+        </div>
+      </div>
+      <span className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
+        →
+      </span>
+    </button>
   );
 }
 
