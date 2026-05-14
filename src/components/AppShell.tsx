@@ -362,8 +362,7 @@ function GroupRow({
           {group.area ?? "—"} · {group.membersCount} membri · {group.publicRoutesCount} percorsi pubblici
         </div>
       </div>
-      <span class
-="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
+      <span className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
         →
       </span>
     </button>
