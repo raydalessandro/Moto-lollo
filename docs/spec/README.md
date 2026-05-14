@@ -24,9 +24,9 @@ Specifica funzionale del front Moto-lollo, organizzata **per schermata** (non pe
 ### Per schermata
 
 **Pillar IO**
-- `10_io_home.md` — dashboard personale
+- `10_io_home.md` — launcher (km + 4 azioni rapide + percorsi salvati)
 - `11_io_mappa.md` — archivio percorsi (creati + salvati)
-- `12_io_registra.md` — hub 4 vie: crea / GPS / GPX / Naviga
+- `12_io_registra.md` — **[ARCHIVED]** sostituito dalle azioni Home
 - `13_io_garage.md` — moto + manutenzione + documenti
 
 **Pillar GRUPPO** (contesto = gruppo corrente)

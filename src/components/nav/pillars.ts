@@ -9,7 +9,6 @@ export type ScreenKey =
   // IO
   | "io.home"
   | "io.mappa"
-  | "io.registra"
   | "io.garage"
   // GRUPPO
   | "gruppo.home"
@@ -68,10 +67,9 @@ export const PILLARS: Record<Pillar, PillarDef> = {
     accent: "#ff6a1f",
     defaultScreen: "io.home",
     tabs: [
-      { key: "io.home",     label: "Home",     iconPath: I.home },
-      { key: "io.mappa",    label: "Mappa",    iconPath: I.map },
-      { key: "io.registra", label: "Registra", iconPath: I.play },
-      { key: "io.garage",   label: "Garage",   iconPath: I.wrench },
+      { key: "io.home",   label: "Home",   iconPath: I.home },
+      { key: "io.mappa",  label: "Mappa",  iconPath: I.map },
+      { key: "io.garage", label: "Garage", iconPath: I.wrench },
     ],
   },
   gruppo: {

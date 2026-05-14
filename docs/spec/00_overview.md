@@ -29,10 +29,11 @@ L'app è organizzata in **3 pillars** mutuamente esclusivi nella bottom nav, pi�
 
 | Tab | Scopo |
 |-----|-------|
-| Home | Dashboard: stats, moto primaria, ultima uscita, promemoria, notifiche |
+| Home | Launcher hub: km totali + 4 azioni rapide (Registra/Crea/Naviga/Carica GPX) che aprono direttamente l'overlay fullscreen + percorsi salvati |
 | Mappa | **Archivio percorsi personali** (creati + salvati da Mondo/Gruppo) |
-| Registra | Hub 4 vie: crea a mano · GPS · GPX · Naviga |
 | Garage | Moto + manutenzione + documenti + scadenze |
+
+Nota: la vecchia tab `io.registra` (hub intermedio) è stata eliminata. Le 4 modalità di guida sono ora azioni della Home — vedi `10_io_home.md` e `12_io_registra.md` (ARCHIVED).
 
 ### Pillar GRUPPO (contesto = gruppo corrente)
 

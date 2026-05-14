@@ -10,6 +10,7 @@ import {
   listSavedPublishedRoutes,
 } from "@/mocks/queries";
 import type { ScreenKey } from "@/components/nav/pillars";
+import type { NavMode } from "@/components/nav/NavigationOverlay";
 import type { PublishedRoute } from "@/types/domain";
 
 // MOCK weather — the real provider lands much later (not in this prototype).
@@ -25,9 +26,10 @@ interface Advisory {
 
 interface HomeScreenProps {
   onNavigate?: (s: ScreenKey) => void;
+  onStartNavigation?: (mode: NavMode) => void;
 }
 
-export function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
+export function HomeScreen({ onNavigate, onStartNavigation }: HomeScreenProps = {}) {
   const me = useQuery((db, userId) => getProfile(db, userId));
   const primary = useQuery((db, userId) => getPrimaryMotorcycle(db, userId));
   const docs = useQuery((db, userId) => listMyDocuments(db, userId));
@@ -167,43 +169,45 @@ export function HomeScreen({ onNavigate }: HomeScreenProps = {}) {
         </button>
       )}
 
-      {/* Quick actions 2x2 */}
+      {/* Quick actions 2x2 — direct entries to the navigation overlay */}
       <section className="shrink-0 px-4 pb-3 pt-3">
-        <div className="mb-2 flex items-baseline justify-between">
-          <p className="font-display text-base font-medium">Azioni rapide</p>
-          <button
-            type="button"
-            onClick={() => onNavigate?.("io.registra")}
-            className="font-mono text-[10px] uppercase tracking-widest text-ink-dim hover:text-ember"
-          >
-            tutte →
-          </button>
-        </div>
+        <p className="mb-2 font-display text-base font-medium">Parti</p>
         <div className="grid grid-cols-2 gap-2">
           <QuickAction
             label="Registra"
             sub="mentre guidi"
             iconPath="M6 3l14 9-14 9z"
             highlight
-            onClick={() => onNavigate?.("io.registra")}
+            onClick={() =>
+              onStartNavigation?.({ kind: "tracking", title: "Uscita libera" })
+            }
           />
           <QuickAction
             label="Crea"
             sub="su mappa"
             iconPath="M9 3L3 6v15l6-3 6 3 6-3V3l-6 3z M9 3v15 M15 6v15"
-            onClick={() => onNavigate?.("io.registra")}
+            onClick={() =>
+              onStartNavigation?.({ kind: "tracking", title: "Editor percorso" })
+            }
           />
           <QuickAction
             label="Naviga"
             sub="a destinazione"
             iconPath="M3 11l19-9-9 19-2-8z"
-            onClick={() => onNavigate?.("io.registra")}
+            onClick={() =>
+              onStartNavigation?.({
+                kind: "navigation",
+                destination: "Passo del Tonale",
+              })
+            }
           />
           <QuickAction
             label="Carica"
             sub="GPX"
             iconPath="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3"
-            onClick={() => onNavigate?.("io.registra")}
+            onClick={() => {
+              // GPX upload modal — placeholder MVP.
+            }}
           />
         </div>
       </section>
@@ -257,7 +261,7 @@ function QuickAction({ label, sub, iconPath, highlight, onClick }: QuickActionPr
     <button
       type="button"
       onClick={onClick}
-      className="flex aspect-[2/1.1] flex-col justify-between rounded-xl border bg-panel p-3 text-left transition-all active:scale-[0.98]"
+      className="flex aspect-[2.4/1] items-center gap-3 rounded-xl border bg-panel px-3 py-2.5 text-left transition-all active:scale-[0.98]"
       style={{
         borderColor: highlight ? "var(--ember)" : "var(--line)",
         background: highlight ? "rgba(255, 106, 31, 0.06)" : "var(--panel)",
@@ -268,9 +272,11 @@ function QuickAction({ label, sub, iconPath, highlight, onClick }: QuickActionPr
         size={16}
         className={highlight ? "text-ember" : "text-ink"}
       />
-      <div>
-        <p className="font-display text-sm font-semibold leading-tight">{label}</p>
-        <p className="font-mono text-[9px] uppercase tracking-widest text-ink-dim">
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-display text-sm font-semibold leading-tight">
+          {label}
+        </p>
+        <p className="truncate font-mono text-[9px] uppercase tracking-widest text-ink-dim">
           {sub}
         </p>
       </div>

@@ -39,17 +39,17 @@ Layout `h-full overflow-hidden flex flex-col` — **non scrolla**, tutto in view
 
 Solo se ≥1 documento ≤30g/scaduto. Una riga, sfondo danger/warn tenue, tap → `io.garage`.
 
-### Azioni rapide (grid 2×2)
+### Parti (4 azioni rapide, grid 2×2)
 
-Titolo "Azioni rapide" + link "tutte →" (porta a `io.registra`).
+Titolo "Parti".
 
-4 bottoni quadrati aspect 2:1.1:
-- **Registra** (mentre guidi) — highlight ember (azione principale)
-- **Crea** (su mappa)
-- **Naviga** (a destinazione)
-- **Carica** (GPX)
+4 bottoni rettangolari compatti (aspect 2.4/1) con icona a sinistra + label + sub:
+- **Registra** (mentre guidi) — highlight ember (azione principale) → apre `NavigationOverlay kind=tracking`
+- **Crea** (su mappa) → apre `NavigationOverlay kind=tracking` (modalità editor)
+- **Naviga** (a destinazione) → apre `NavigationOverlay kind=navigation`
+- **Carica** (GPX) → modale upload (placeholder MVP)
 
-Tutti navigano a `io.registra` (in MVP). In Fase 1+ ogni bottone può deep-linkare alla modalità specifica.
+Sono l'**unico** entry point alle 4 modalità di guida (la vecchia tab `io.registra` è stata eliminata — vedi `12_io_registra.md` ARCHIVED).
 
 ### Percorsi salvati (carousel orizzontale)
 
