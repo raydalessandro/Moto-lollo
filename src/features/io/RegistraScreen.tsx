@@ -29,7 +29,7 @@ const MODES: ModeDef[] = [
     description:
       "Tap sulla mappa per aggiungere waypoint, drag per spostarli. L'app calcola distanza, durata e dislivello stimati.",
     iconPath: "M9 3L3 6v15l6-3 6 3 6-3V3l-6 3z M9 3v15 M15 6v15",
-    hint: "Editor mappa con waypoint e polyline live (Step 14 lo apre fullscreen).",
+    hint: "Editor mappa con waypoint e polyline live. Avvio apre l'overlay fullscreen.",
   },
   {
     key: "gps",
@@ -130,7 +130,7 @@ export function RegistraScreen({ onStartNavigation }: RegistraScreenProps = {}) 
         <SectionLabel num="02">Da costruire</SectionLabel>
         <ul className="flex flex-col gap-2 rounded-xl border border-line bg-panel p-4 text-sm text-ink-soft">
           {[
-            "Mappa fullscreen di navigazione (Step 14)",
+            "Editor mappa interattivo per la modalità Crea",
             "Tracking GPS reale (per ora simulato visivamente)",
             "Parser GPX (per ora bottone simulato)",
             "Ricerca destinazione (geocoding Mapbox)",

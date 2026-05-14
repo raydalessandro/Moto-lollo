@@ -29,11 +29,8 @@ import type {
   FollowRelationship,
   PublicEvent,
   EventRSVP,
-  Segment,
-  SegmentAttempt,
   Badge,
   UserBadge,
-  Challenge,
   SafetyContact,
   LiveSession,
   Notification,
@@ -83,7 +80,7 @@ export function listMyDocuments(db: Db, userId: UUID): Document[] {
     .sort((a, b) => a.expiresAt.localeCompare(b.expiresAt));
 }
 
-// ─── Activities ─────────────────────────────────────────────────────────────
+// ─── Activities ───────────────────────────────────────────────────────────────
 
 export function listMyActivities(db: Db, userId: UUID): Activity[] {
   return Object.values(db.activities)
@@ -105,7 +102,7 @@ export function listActivityMedia(db: Db, activityId: UUID): ActivityMedia[] {
     .sort((a, b) => a.takenAt.localeCompare(b.takenAt));
 }
 
-// ─── Planned routes ─────────────────────────────────────────────────────────
+// ─── Planned routes ──────────────────────────────────────────────────────────────
 
 export function listMyPlannedRoutes(db: Db, userId: UUID): PlannedRoute[] {
   return Object.values(db.plannedRoutes)
@@ -307,43 +304,7 @@ export function getMyEventRSVP(
   );
 }
 
-// ─── Classifica ─────────────────────────────────────────────────────────────
-
-export function listSegments(db: Db): Segment[] {
-  return Object.values(db.segments);
-}
-
-export function getSegment(db: Db, id: UUID): Segment | undefined {
-  return db.segments[id];
-}
-
-export interface LeaderboardEntry {
-  rank: number;
-  profile: Profile | undefined;
-  attempt: SegmentAttempt;
-}
-
-export function listLeaderboardFor(
-  db: Db,
-  segmentId: UUID,
-  limit = 10,
-): LeaderboardEntry[] {
-  const attempts = Object.values(db.segmentAttempts)
-    .filter((a) => a.segmentId === segmentId)
-    .sort((a, b) => a.durationSeconds - b.durationSeconds);
-  // keep only each user's best attempt
-  const bestByUser = new Map<UUID, SegmentAttempt>();
-  for (const a of attempts) {
-    if (!bestByUser.has(a.userId)) bestByUser.set(a.userId, a);
-  }
-  return [...bestByUser.values()]
-    .slice(0, limit)
-    .map((attempt, i) => ({
-      rank: i + 1,
-      profile: db.profiles[attempt.userId],
-      attempt,
-    }));
-}
+// ─── Badges ─────────────────────────────────────────────────────────────────
 
 export function listAllBadges(db: Db): Badge[] {
   return Object.values(db.badges);
@@ -357,12 +318,6 @@ export function listUserBadges(db: Db, userId: UUID): Array<{ badge: Badge; earn
     .sort((a, b) => b.earnedAt.localeCompare(a.earnedAt));
 }
 
-export function listActiveChallenges(db: Db, nowIso: string): Challenge[] {
-  return Object.values(db.challenges).filter(
-    (c) => c.startAt <= nowIso && c.endAt >= nowIso,
-  );
-}
-
 // ─── Safety ─────────────────────────────────────────────────────────────────
 
 export function listSafetyContacts(db: Db, userId: UUID): SafetyContact[] {
@@ -373,7 +328,7 @@ export function listActiveLiveSessions(db: Db): LiveSession[] {
   return Object.values(db.liveSessions).filter((l) => l.state === "active");
 }
 
-// ─── Notifications ──────────────────────────────────────────────────────────
+// ─── Notifications ───────────────────────────────────────────────────────────
 
 export function listNotifications(db: Db, userId: UUID): Notification[] {
   return Object.values(db.notifications)
@@ -385,7 +340,7 @@ export function countUnreadNotifications(db: Db, userId: UUID): number {
   return listNotifications(db, userId).filter((n) => !n.readAt).length;
 }
 
-// ─── Step 6: moderation, proposals, board, saved routes ─────────────────────
+// ─── Moderation: proposals, requests, board, saved routes ──────────────
 
 export function isAdminOfGroup(db: Db, userId: UUID, groupId: UUID): boolean {
   return Object.values(db.groupMemberships).some(

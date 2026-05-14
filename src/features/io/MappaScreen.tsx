@@ -25,8 +25,8 @@ const VIS_LABEL: Record<Visibility, string> = {
 
 export function MappaScreen() {
   const [filter, setFilter] = useState<ArchiveFilter>("all");
-  // For now everything is "mine" (createdRoute owner = me). When Step 6 lands,
-  // SavedRoute will populate the "saved" bucket.
+  // "Saved" bucket renders SavedRoute → PublishedRoute joined back. Wiring
+  // pending in a follow-up screen iteration.
   const myCreated = useQuery((db, userId) => listMyPlannedRoutes(db, userId));
   const saved: PlannedRoute[] = [];
 
@@ -87,7 +87,7 @@ export function MappaScreen() {
             "Mini-mappa anteprima del tracciato per ogni percorso",
             "Tap percorso → dettaglio fullscreen (statistiche, replay, condivisione)",
             "Pubblica su Mondo / pubblica solo dentro un gruppo",
-            "Salvataggio percorsi da Feed Mondo / da Gruppi (Step 6 introduce SavedRoute)",
+            "Wiring sezione \"Salvati\" (SavedRoute esiste, manca il render)",
             "Filtri avanzati per tag, area, durata",
             "Modifica / duplica / elimina percorso",
           ].map((b, i) => (

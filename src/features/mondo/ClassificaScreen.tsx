@@ -8,7 +8,6 @@ import { Icon } from "@/components/nav/Icon";
 import { useQuery } from "@/mocks/DbProvider";
 import {
   listPublishedRoutes,
-  listActiveChallenges,
   countLikes,
   getProfile,
 } from "@/mocks/queries";
@@ -25,7 +24,6 @@ const SORTS: Array<{ key: SortKey; label: string }> = [
 
 export function ClassificaScreen() {
   const routes = useQuery((db) => listPublishedRoutes(db));
-  const challenges = useQuery((db, _uid, now) => listActiveChallenges(db, now));
   const [sort, setSort] = useState<SortKey>("navigated");
   const [areaFilter, setAreaFilter] = useState<string | "all">("all");
 
@@ -61,36 +59,8 @@ export function ClassificaScreen() {
         </p>
       </section>
 
-      {challenges.length > 0 && (
-        <section>
-          <SectionLabel num="01">Sfida del mese</SectionLabel>
-          {challenges.map((c) => (
-            <Card key={c.id}>
-              <div className="flex items-baseline justify-between">
-                <div className="font-display text-lg font-semibold">{c.title}</div>
-                <span className="font-mono text-[10px] uppercase tracking-widest text-ember">
-                  {c.participantsCount} rider
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-ink-dim">{c.description}</p>
-              <div className="mt-3 flex items-center gap-3 text-[11px] text-ink-dim">
-                <span>
-                  {new Date(c.startAt).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })} →{" "}
-                  {new Date(c.endAt).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
-                </span>
-                {c.targetKm && (
-                  <span className="ml-auto">
-                    <span className="text-ember">{c.targetKm}</span> km
-                  </span>
-                )}
-              </div>
-            </Card>
-          ))}
-        </section>
-      )}
-
       <section>
-        <SectionLabel num="02">Ordina per</SectionLabel>
+        <SectionLabel num="01">Ordina per</SectionLabel>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {SORTS.map((s) => (
             <Chip key={s.key} active={sort === s.key} onClick={() => setSort(s.key)}>
@@ -114,7 +84,7 @@ export function ClassificaScreen() {
       </section>
 
       <section>
-        <SectionLabel num="03">Classifica</SectionLabel>
+        <SectionLabel num="02">Classifica</SectionLabel>
         <div className="flex flex-col gap-3">
           {sorted.map((r, i) => (
             <RankRow key={r.id} route={r} rank={i + 1} sort={sort} />
