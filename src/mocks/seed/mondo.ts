@@ -45,6 +45,13 @@ const PUBS: PubSeed[] = [
 export function seedPublishedRoutes(): Record<UUID, PublishedRoute> {
   const out: Record<UUID, PublishedRoute> = {};
   for (const p of PUBS) {
+    // Step 6 — denormalized counters and scope. For the prototype we use the
+    // route's index as a deterministic seed for counters so refreshes are
+    // stable. ~30% of public routes also work for cars.
+    const idx = PUBS.indexOf(p);
+    const savedCount = 4 + ((idx * 7) % 23);
+    const navigatedCount = 8 + ((idx * 13) % 47);
+    const alsoForCars = idx % 3 === 0;
     out[p.id] = {
       id: p.id,
       sourceType: p.sourceType,
@@ -58,6 +65,10 @@ export function seedPublishedRoutes(): Record<UUID, PublishedRoute> {
       area: p.area,
       tags: p.tags,
       publishedAt: addDays(NOW, -p.daysAgo),
+      scope: "public",
+      alsoForCars,
+      savedCount,
+      navigatedCount,
     };
   }
   return out;
