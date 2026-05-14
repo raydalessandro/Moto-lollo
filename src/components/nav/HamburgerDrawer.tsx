@@ -5,7 +5,13 @@ import { Icon } from "./Icon";
 import { useQuery } from "@/mocks/DbProvider";
 import { getProfile } from "@/mocks/queries";
 
-export type DrawerDestination = "profilo" | "impostazioni" | "privacy" | "logout";
+export type DrawerDestination =
+  | "profilo"
+  | "eventi"
+  | "classifica"
+  | "impostazioni"
+  | "privacy"
+  | "logout";
 
 interface HamburgerDrawerProps {
   open: boolean;
@@ -27,6 +33,19 @@ const ITEMS: DrawerItem[] = [
     description: "Identità pubblica, statistiche, badge",
     iconPath:
       "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  },
+  {
+    key: "eventi",
+    label: "Eventi",
+    description: "Raduni, track day, fiere — eventi curati",
+    iconPath: "M3 4h18v18H3z M16 2v4 M8 2v4 M3 10h18",
+  },
+  {
+    key: "classifica",
+    label: "Classifica percorsi",
+    description: "I percorsi top della community",
+    iconPath:
+      "M6 9H4.5a2.5 2.5 0 0 1 0-5H6 M18 9h1.5a2.5 2.5 0 0 0 0-5H18 M4 22h16 M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22 M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22 M18 2H6v7a6 6 0 0 0 12 0z",
   },
   {
     key: "impostazioni",

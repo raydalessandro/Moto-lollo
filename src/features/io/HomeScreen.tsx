@@ -1,17 +1,14 @@
 "use client";
 
-import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/nav/Icon";
 import { useQuery } from "@/mocks/DbProvider";
 import {
   getPrimaryMotorcycle,
   getProfile,
   listMyDocuments,
-  listSavedPublishedRoutes,
 } from "@/mocks/queries";
 import type { ScreenKey } from "@/components/nav/pillars";
 import type { NavMode } from "@/components/nav/NavigationOverlay";
-import type { PublishedRoute } from "@/types/domain";
 
 // MOCK weather — the real provider lands much later (not in this prototype).
 const WEATHER = {
@@ -33,7 +30,6 @@ export function HomeScreen({ onNavigate, onStartNavigation }: HomeScreenProps = 
   const me = useQuery((db, userId) => getProfile(db, userId));
   const primary = useQuery((db, userId) => getPrimaryMotorcycle(db, userId));
   const docs = useQuery((db, userId) => listMyDocuments(db, userId));
-  const saved = useQuery((db, userId) => listSavedPublishedRoutes(db, userId));
   const now = useQuery((_db, _uid, now) => now);
 
   const advisories: Advisory[] = [];
@@ -53,7 +49,7 @@ export function HomeScreen({ onNavigate, onStartNavigation }: HomeScreenProps = 
       });
     }
   }
-  const topAdvisory = advisories[0]; // mostra solo la più urgente
+  const topAdvisory = advisories[0];
 
   return (
     <div className="screen-enter flex h-full flex-col overflow-hidden">
@@ -66,14 +62,12 @@ export function HomeScreen({ onNavigate, onStartNavigation }: HomeScreenProps = 
           minHeight: "32vh",
         }}
       >
-        {/* Ember glow */}
         <div
           className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-40"
           style={{
             background: "radial-gradient(circle, var(--ember) 0%, transparent 70%)",
           }}
         />
-        {/* Topographic lines */}
         <svg
           className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.06]"
           viewBox="0 0 360 240"
@@ -92,7 +86,6 @@ export function HomeScreen({ onNavigate, onStartNavigation }: HomeScreenProps = 
             );
           })}
         </svg>
-        {/* Subtle dot grid */}
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.04]"
           style={{
@@ -115,7 +108,6 @@ export function HomeScreen({ onNavigate, onStartNavigation }: HomeScreenProps = 
             </p>
           </div>
 
-          {/* Bottom: total km big */}
           <div className="mt-5 flex items-end justify-between">
             <div>
               <p className="mb-1 font-mono text-[10px] uppercase tracking-widest text-ink-dim">
@@ -170,9 +162,8 @@ export function HomeScreen({ onNavigate, onStartNavigation }: HomeScreenProps = 
       )}
 
       {/* Quick actions 2x2 — direct entries to the navigation overlay */}
-      <section className="shrink-0 px-4 pb-3 pt-3">
-        <p className="mb-2 font-display text-base font-medium">Parti</p>
-        <div className="grid grid-cols-2 gap-2">
+      <section className="flex flex-1 flex-col justify-center px-4 py-4">
+        <div className="grid grid-cols-2 gap-3">
           <QuickAction
             label="Registra"
             sub="mentre guidi"
@@ -211,37 +202,6 @@ export function HomeScreen({ onNavigate, onStartNavigation }: HomeScreenProps = 
           />
         </div>
       </section>
-
-      {/* Saved routes carousel */}
-      <section className="flex min-h-0 flex-1 flex-col px-4 pb-3">
-        <div className="mb-2 flex shrink-0 items-baseline justify-between">
-          <p className="font-display text-base font-medium">
-            I miei percorsi salvati
-          </p>
-          <button
-            type="button"
-            onClick={() => onNavigate?.("io.mappa")}
-            className="font-mono text-[10px] uppercase tracking-widest text-ink-dim hover:text-ember"
-          >
-            tutti →
-          </button>
-        </div>
-        {saved.length > 0 ? (
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 scrollbar-hide">
-            {saved.slice(0, 5).map((r) => (
-              <SavedRouteCard
-                key={r.id}
-                route={r}
-                onClick={() => onNavigate?.("io.mappa")}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-line bg-panel/60 p-4 text-center text-xs text-ink-dim">
-            Nessun percorso salvato ancora. Esplora il Mondo per salvarne uno.
-          </div>
-        )}
-      </section>
     </div>
   );
 }
@@ -261,7 +221,7 @@ function QuickAction({ label, sub, iconPath, highlight, onClick }: QuickActionPr
     <button
       type="button"
       onClick={onClick}
-      className="flex aspect-[2.4/1] items-center gap-3 rounded-xl border bg-panel px-3 py-2.5 text-left transition-all active:scale-[0.98]"
+      className="flex aspect-square flex-col justify-between rounded-xl border bg-panel p-4 text-left transition-all active:scale-[0.98]"
       style={{
         borderColor: highlight ? "var(--ember)" : "var(--line)",
         background: highlight ? "rgba(255, 106, 31, 0.06)" : "var(--panel)",
@@ -269,14 +229,14 @@ function QuickAction({ label, sub, iconPath, highlight, onClick }: QuickActionPr
     >
       <Icon
         d={iconPath}
-        size={16}
+        size={20}
         className={highlight ? "text-ember" : "text-ink"}
       />
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-display text-sm font-semibold leading-tight">
+      <div>
+        <p className="font-display text-base font-semibold leading-tight">
           {label}
         </p>
-        <p className="truncate font-mono text-[9px] uppercase tracking-widest text-ink-dim">
+        <p className="mt-0.5 font-mono text-[10px] uppercase tracking-widest text-ink-dim">
           {sub}
         </p>
       </div>
@@ -284,118 +244,6 @@ function QuickAction({ label, sub, iconPath, highlight, onClick }: QuickActionPr
   );
 }
 
-// ─── Saved route card (horizontal scroll item) ────────────────────────────────
-
-function SavedRouteCard({
-  route,
-  onClick,
-}: {
-  route: PublishedRoute;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-[44vw] max-w-[180px] shrink-0 flex-col overflow-hidden rounded-xl border border-line bg-panel text-left transition-colors hover:border-line-soft"
-    >
-      <div className="relative">
-        <MiniMap seed={hashSeed(route.id)} height={70} />
-        {route.alsoForCars && (
-          <span className="absolute left-1.5 top-1.5 rounded-md bg-bg/80 px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-widest text-info backdrop-blur-sm">
-            Moto · Auto
-          </span>
-        )}
-      </div>
-      <Card className="!rounded-none !border-0 !bg-transparent !p-2.5">
-        <p className="truncate text-xs font-medium">{route.title}</p>
-        <p className="mt-0.5 font-mono text-[10px] tabular-nums text-ink-dim">
-          {route.distanceKm} km
-          {route.area ? ` · ${route.area}` : ""}
-        </p>
-      </Card>
-    </button>
-  );
-}
-
-// ─── MiniMap (riusato per ultima uscita / saved routes) ───────────────────────
-
-function MiniMap({ seed, height = 70 }: { seed: number; height?: number }) {
-  let s = seed >>> 0;
-  const next = () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-  const points: string[] = [];
-  const N = 14;
-  const W = 320;
-  const H = height;
-  let x = 16;
-  let y = H / 2 + (next() - 0.5) * H * 0.4;
-  points.push(`${x},${y}`);
-  for (let i = 1; i < N; i++) {
-    x += (W - 32) / (N - 1);
-    y = Math.max(12, Math.min(H - 12, y + (next() - 0.5) * H * 0.5));
-    points.push(`${x.toFixed(1)},${y.toFixed(1)}`);
-  }
-  return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      preserveAspectRatio="none"
-      className="block h-full w-full"
-      style={{ background: "linear-gradient(180deg, #14110d 0%, #060503 100%)" }}
-    >
-      {[0.25, 0.5, 0.75].map((t) => (
-        <line
-          key={t}
-          x1={0}
-          x2={W}
-          y1={H * t}
-          y2={H * t}
-          stroke="rgba(255,255,255,0.04)"
-          strokeWidth={1}
-        />
-      ))}
-      <polyline
-        points={points.join(" ")}
-        fill="none"
-        stroke="var(--ember)"
-        strokeWidth={3}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      <circle
-        cx={parseFloat(points[0].split(",")[0])}
-        cy={parseFloat(points[0].split(",")[1])}
-        r={3.5}
-        fill="var(--ink)"
-        stroke="var(--bg)"
-        strokeWidth={1.5}
-      />
-      <circle
-        cx={parseFloat(points[points.length - 1].split(",")[0])}
-        cy={parseFloat(points[points.length - 1].split(",")[1])}
-        r={3.5}
-        fill="var(--ember)"
-        stroke="var(--bg)"
-        strokeWidth={1.5}
-      />
-    </svg>
-  );
-}
-
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function hashSeed(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
 }

@@ -8,6 +8,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Versioning [Se
 
 ## [Unreleased]
 
+### Cambiato
+- **Information Architecture: da 3 pillar a 2 pillar**. Il pillar MONDO è stato sciolto:
+  - **Feed** è diventato la 3ª tab del pillar IO (`io.feed`).
+  - **Eventi** e **Classifica** vivono come destinazioni del drawer hamburger.
+- **Pillar switcher rimosso** dalla bottom nav. Il toggle IO↔GRUPPO è ora **compatto nell'Header** (pillola segmentata a 2 sezioni).
+- **Bottom nav semplificata**: una sola riga di tab del pillar attivo (no più switcher orizzontale sopra).
+- **Home pulita**: rimosso il carosello "I miei percorsi salvati" (già in `io.mappa`). 4 azioni Registra/Crea/Naviga/Carica GPX tornano a essere bottoni quadrati verticali (icona in alto, label sotto), aspect 1:1.
+- **`io.registra` eliminato**: le 4 modalità vivono solo come azioni della Home, aprono direttamente l'overlay fullscreen.
+
 ### In arrivo
 - **Fase 1 — MVP "IO solo"**: Supabase setup, auth screens, schema migration 001-004, Mapbox integration, tracking GPS reale, PWA manifest. Vedi [`docs/ROADMAP.md`](./docs/ROADMAP.md) §"Fase 1".
 

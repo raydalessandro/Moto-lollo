@@ -25,13 +25,19 @@ import { CordataScreen } from "@/features/gruppo/CordataScreen";
 import { StoriaScreen } from "@/features/gruppo/StoriaScreen";
 import { DiarioScreen } from "@/features/gruppo/DiarioScreen";
 
+// Feed lives in the IO pillar (3rd tab). Eventi + Classifica live in the drawer.
 import { FeedScreen } from "@/features/mondo/FeedScreen";
 import { EventiScreen } from "@/features/mondo/EventiScreen";
 import { ClassificaScreen } from "@/features/mondo/ClassificaScreen";
-// Profilo is no longer a MONDO tab — reachable only through the hamburger drawer.
 import { ProfiloScreen } from "@/features/profilo/ProfiloScreen";
 
-type Overlay = null | { kind: "profilo" } | { kind: "impostazioni" } | { kind: "privacy" };
+type Overlay =
+  | null
+  | { kind: "profilo" }
+  | { kind: "eventi" }
+  | { kind: "classifica" }
+  | { kind: "impostazioni" }
+  | { kind: "privacy" };
 
 export function AppShell() {
   const myGroups = useQuery((db, userId) => listMyGroups(db, userId));
@@ -71,6 +77,8 @@ export function AppShell() {
         return <HomeScreen onNavigate={setScreen} onStartNavigation={setNavMode} />;
       case "io.mappa":
         return <MappaScreen />;
+      case "io.feed":
+        return <FeedScreen />;
       case "io.garage":
         return <GarageScreen />;
       case "gruppo.home":
@@ -83,12 +91,6 @@ export function AppShell() {
         return <StoriaScreen group={currentGroup} />;
       case "gruppo.diario":
         return <DiarioScreen group={currentGroup} />;
-      case "mondo.feed":
-        return <FeedScreen />;
-      case "mondo.eventi":
-        return <EventiScreen />;
-      case "mondo.classifica":
-        return <ClassificaScreen />;
     }
   };
 
@@ -98,6 +100,7 @@ export function AppShell() {
         pillar={pillar}
         currentGroup={currentGroup}
         onOpenMenu={() => setDrawerOpen(true)}
+        onPillarChange={handlePillarChange}
       />
       {pillar === "gruppo" && (
         <GroupSelector
@@ -114,7 +117,6 @@ export function AppShell() {
       <BottomNav
         pillar={pillar}
         screen={screen}
-        onPillarChange={handlePillarChange}
         onScreenChange={setScreen}
         currentGroup={currentGroup}
       />
@@ -379,6 +381,8 @@ interface DrawerOverlayProps {
 function DrawerOverlay({ overlay, onClose }: DrawerOverlayProps) {
   const titles: Record<NonNullable<Overlay>["kind"], string> = {
     profilo: "Profilo",
+    eventi: "Eventi",
+    classifica: "Classifica",
     impostazioni: "Impostazioni",
     privacy: "Privacy & Policy",
   };
@@ -400,6 +404,8 @@ function DrawerOverlay({ overlay, onClose }: DrawerOverlayProps) {
       </header>
       <main className="flex-1 overflow-y-auto scrollbar-hide">
         {overlay.kind === "profilo" && <ProfiloScreen />}
+        {overlay.kind === "eventi" && <EventiScreen />}
+        {overlay.kind === "classifica" && <ClassificaScreen />}
         {overlay.kind === "impostazioni" && <SettingsPlaceholder />}
         {overlay.kind === "privacy" && <PrivacyPlaceholder />}
       </main>

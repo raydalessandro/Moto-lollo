@@ -1,13 +1,17 @@
-# 50 · Drawer — Profilo · Impostazioni · Privacy
+# 50 · Drawer — Profilo · Eventi · Classifica · Impostazioni · Privacy
 
 ## Purpose
 
-Hamburger drawer top-left dell'Header. Contiene le 3 destinazioni "personali fuori pillar" + logout:
+Hamburger drawer top-left dell'Header. Contiene le destinazioni "esplorative o personali" fuori dai 2 pillar core (IO + GRUPPO):
 
 - **Profilo**: identità pubblica, stats, badge, moto (riusa `ProfiloScreen`)
+- **Eventi**: eventi curati big — raduni, EICMA, track day (ex `mondo.eventi`, vedi `31_mondo_eventi.md`)
+- **Classifica**: classifica percorsi della community (ex `mondo.classifica`, vedi `32_mondo_classifica.md`)
 - **Impostazioni**: tema, lingua, unità, notifiche, default visibility
 - **Privacy & Policy**: visibilità account, consensi, export dati, cancella account
 - **Esci**: logout
+
+**Note IA**: Eventi e Classifica vivono nel drawer (non tab) perché sono visite **occasionali esplorative**, non quotidiane. Il pillar MONDO è stato sciolto dopo iterazione UX: solo il Feed (visita frequente) è rimasto come tab core, dentro IO.
 
 File implementazioni:
 - Drawer container: `src/components/nav/HamburgerDrawer.tsx`

@@ -2,42 +2,45 @@
 
 ## Modello mentale
 
-L'app è organizzata in **3 pillars** mutuamente esclusivi nella bottom nav, più 2 zone "fuori bottom":
+L'app è organizzata in **2 pillars** (IO e GRUPPO) — switchabili tramite **toggle compatto nell'Header**. Più 2 zone "fuori bottom":
 
 ```
-┌─ HEADER ────────────────────────────────────────────┐
-│  [☰]   ▸ Moto_App    01 · PILLAR          [Avatar]  │
-└─────────────────────────────────────────────────────┘
-         ↑                                       ↑
-         drawer                                fullscreen
-         (Profilo · Impostazioni · Privacy)    overlay
-                                                ↓
-                                        Navigation (turn-by-turn)
-                                        Tracking GPS
-                                        Cordata live
+┌─ HEADER ──────────────────────────────────────────────┐
+│  [☰]    [ IO  |  MG GRUPPO ]               [Avatar]   │
+└───────────────────────────────────────────────────────┘
+         ↑       ↑                                 ↑
+         drawer  pillar toggle                   fullscreen
+                                                  overlay
+                                                  ↓
+                                          Navigation
+                                          Tracking GPS
+                                          Cordata live
 
-┌─ MAIN  ─────────────────────────────────────────────┐
-│  contenuto della pillar/screen corrente             │
-└─────────────────────────────────────────────────────┘
+┌─ MAIN  ───────────────────────────────────────────────┐
+│  contenuto del pillar/screen corrente                 │
+└───────────────────────────────────────────────────────┘
 
-┌─ BOTTOM NAV ────────────────────────────────────────┐
-│   IO   ·   GRUPPO   ·   MONDO                       │
-└─────────────────────────────────────────────────────┘
+┌─ BOTTOM NAV ──────────────────────────────────────────┐
+│   tab 1  ·  tab 2  ·  tab 3  ·  ...                   │  (tab del pillar attivo, niente switcher)
+└───────────────────────────────────────────────────────┘
 ```
 
-### Pillar IO (personale)
+### Pillar IO (personale + community feed)
 
 | Tab | Scopo |
 |-----|-------|
-| Home | Launcher hub: km totali + 4 azioni rapide (Registra/Crea/Naviga/Carica GPX) che aprono direttamente l'overlay fullscreen + percorsi salvati |
+| Home | Launcher hub: km totali + 4 azioni rapide (Registra/Crea/Naviga/Carica GPX) che aprono direttamente l'overlay fullscreen |
 | Mappa | **Archivio percorsi personali** (creati + salvati da Mondo/Gruppo) |
+| Feed | Percorsi pubblici della community (filtri: chi segui · tutti · alsoForCars) |
 | Garage | Moto + manutenzione + documenti + scadenze |
 
-Nota: la vecchia tab `io.registra` (hub intermedio) è stata eliminata. Le 4 modalità di guida sono ora azioni della Home — vedi `10_io_home.md` e `12_io_registra.md` (ARCHIVED).
+Note:
+- La vecchia tab `io.registra` è stata eliminata (vedi `12_io_registra.md` ARCHIVED). Le 4 modalità di guida sono azioni della Home.
+- Il vecchio pillar MONDO è stato sciolto: **Feed** è diventato la 3ª tab di IO; **Eventi** e **Classifica** vivono nel drawer hamburger.
 
 ### Pillar GRUPPO (contesto = gruppo corrente)
 
-Sopra il pillar c'è il **GroupSelector** (chip strip): i miei gruppi + bottone "+ esplora". Tappando "esplora" si apre lo schermo lista gruppi pubblici. Tappando un gruppo nel chip strip si cambia contesto.
+Sopra il pillar c'è il **GroupSelector** (chip strip): i miei gruppi + bottone "+ esplora". Tap "esplora" → schermo lista gruppi pubblici. Tap gruppo → switch contesto.
 
 | Tab | Scopo |
 |-----|-------|
@@ -49,21 +52,15 @@ Sopra il pillar c'è il **GroupSelector** (chip strip): i miei gruppi + bottone 
 
 Per **non-membri** che entrano in un gruppo tramite Esplora, lo screen `gruppo.home` mostra il **profilo del gruppo** (membri pubblici, prossima uscita, percorsi pubblici) + tasto "richiedi iscrizione".
 
-### Pillar MONDO (community)
-
-| Tab | Scopo |
-|-----|-------|
-| Feed | Percorsi pubblici (di chi segui · tutti) + filtri |
-| Eventi | Solo eventi big curati da noi (raduni, EICMA, track day) |
-| Classifica | Classifica di **percorsi** (non di utenti): likes / saves / navigated |
-
 ### Drawer (fuori pillar)
 
 Apertura da hamburger top-left.
 
 | Voce | Scopo |
 |------|-------|
-| Profilo | Identità, stats, badge, moto. NIENTE settings/privacy qui. |
+| Profilo | Identità, stats, badge, moto |
+| Eventi | Eventi big curati da noi (raduni, EICMA, track day) |
+| Classifica | Classifica di **percorsi** della community (likes / saves / navigated) |
 | Impostazioni | Tema, lingua, unità, notifiche, visibilità default |
 | Privacy & Policy | Visibilità account, consensi, esporta dati, cancella account |
 | Esci | Logout |

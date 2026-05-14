@@ -24,9 +24,10 @@ Specifica funzionale del front Moto-lollo, organizzata **per schermata** (non pe
 ### Per schermata
 
 **Pillar IO**
-- `10_io_home.md` — launcher (km + 4 azioni rapide + percorsi salvati)
+- `10_io_home.md` — launcher (km + 4 azioni rapide)
 - `11_io_mappa.md` — archivio percorsi (creati + salvati)
 - `12_io_registra.md` — **[ARCHIVED]** sostituito dalle azioni Home
+- `30_mondo_feed.md` — Feed (3ª tab IO dopo scioglimento MONDO)
 - `13_io_garage.md` — moto + manutenzione + documenti
 
 **Pillar GRUPPO** (contesto = gruppo corrente)
@@ -37,14 +38,13 @@ Specifica funzionale del front Moto-lollo, organizzata **per schermata** (non pe
 - `24_gruppo_storia.md` — ultima uscita finestrata (24h+30g)
 - `25_gruppo_diario.md` — archivio cristallizzato
 
-**Pillar MONDO**
-- `30_mondo_feed.md` — percorsi pubblici + filtri (alsoForCars, area, tag)
-- `31_mondo_eventi.md` — eventi curati big
-- `32_mondo_classifica.md` — classifica di **percorsi** (likes/saves/nav)
+**Drawer destinations** (ex MONDO pillar — sciolto)
+- `31_mondo_eventi.md` — eventi curati big (drawer destination)
+- `32_mondo_classifica.md` — classifica percorsi (drawer destination)
 
 **Trasversali**
 - `40_navigation.md` — overlay fullscreen turn-by-turn / tracking / cordata
-- `50_drawer.md` — Profilo · Impostazioni · Privacy
+- `50_drawer.md` — Profilo · Eventi · Classifica · Impostazioni · Privacy
 
 ---
 

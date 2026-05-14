@@ -1,4 +1,6 @@
-# 32 · mondo.classifica — Classifica percorsi
+# 32 · Classifica — drawer (ex mondo.classifica)
+
+> **Nota IA (2026-05-14):** dopo lo scioglimento del pillar MONDO, questa schermata è una **destinazione del drawer hamburger** (`drawer.classifica`), non più una tab bottom nav. Aperta come overlay fullscreen tipo Profilo/Impostazioni.
 
 ## Purpose
 

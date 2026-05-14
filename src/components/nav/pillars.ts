@@ -1,25 +1,22 @@
 /**
- * 3-pillar navigation model from the prototype.
- * Each pillar has its own set of tabs and its own accent color.
+ * 2-pillar navigation model: IO (personal + community feed) and GRUPPO.
+ * Eventi and Classifica live in the hamburger drawer.
  */
 
-export type Pillar = "io" | "gruppo" | "mondo";
+export type Pillar = "io" | "gruppo";
 
 export type ScreenKey =
   // IO
   | "io.home"
   | "io.mappa"
+  | "io.feed"
   | "io.garage"
   // GRUPPO
   | "gruppo.home"
   | "gruppo.pianifica"
   | "gruppo.cordata"
   | "gruppo.storia"
-  | "gruppo.diario"
-  // MONDO
-  | "mondo.feed"
-  | "mondo.eventi"
-  | "mondo.classifica";
+  | "gruppo.diario";
 
 export interface TabDef {
   key: ScreenKey;
@@ -69,6 +66,7 @@ export const PILLARS: Record<Pillar, PillarDef> = {
     tabs: [
       { key: "io.home",   label: "Home",   iconPath: I.home },
       { key: "io.mappa",  label: "Mappa",  iconPath: I.map },
+      { key: "io.feed",   label: "Feed",   iconPath: I.feed },
       { key: "io.garage", label: "Garage", iconPath: I.wrench },
     ],
   },
@@ -86,21 +84,9 @@ export const PILLARS: Record<Pillar, PillarDef> = {
       { key: "gruppo.diario",    label: "Diario",    iconPath: I.book },
     ],
   },
-  mondo: {
-    key: "mondo",
-    label: "MONDO",
-    subtitle: "community",
-    accent: "#6bb0ff",
-    defaultScreen: "mondo.feed",
-    tabs: [
-      { key: "mondo.feed",       label: "Feed",     iconPath: I.feed },
-      { key: "mondo.eventi",     label: "Eventi",   iconPath: I.calendar },
-      { key: "mondo.classifica", label: "Classif.", iconPath: I.trophy },
-    ],
-  },
 };
 
-export const PILLAR_ORDER: Pillar[] = ["io", "gruppo", "mondo"];
+export const PILLAR_ORDER: Pillar[] = ["io", "gruppo"];
 
 export function pillarOf(screen: ScreenKey): Pillar {
   return screen.split(".")[0] as Pillar;

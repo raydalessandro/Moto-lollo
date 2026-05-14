@@ -1,8 +1,10 @@
-# 30 · mondo.feed — Feed percorsi pubblici
+# 30 · io.feed — Feed percorsi pubblici
+
+> **Nota IA (2026-05-14):** dopo lo scioglimento del pillar MONDO, questa schermata è la **3ª tab del pillar IO** (key `io.feed`). Il file source resta `src/features/mondo/FeedScreen.tsx` per pulizia di import path; verrà rinominato in un cleanup futuro.
 
 ## Purpose
 
-Il feed principale del pillar MONDO: percorsi pubblici della community. Due viste filtro (chi segui · tutti) + un toggle "solo percorsi anche per auto". L'utente scopre, legge la copertina, like/save/comment, eventualmente tap → detail.
+Feed principale della community: percorsi pubblici. Due viste filtro (chi segui · tutti) + un toggle "solo percorsi anche per auto". L'utente scopre, legge la copertina, like/save/comment, eventualmente tap → detail.
 
 File implementazione: `src/features/mondo/FeedScreen.tsx`.
 

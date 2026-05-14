@@ -6,12 +6,17 @@
 
 ## Stato (2026-05-14)
 
-**Fase 0 chiusa.** Frontend prototype completo, spec v2 scritta, repo agent-ready.
+**Fase 0 chiusa + iterazione IA UI in corso.** Frontend prototype completo, spec v2 scritta, repo agent-ready. Recente iterazione UI: passaggio da 3 pillar a 2 pillar (vedi CHANGELOG).
 
 - Build verde su `main`
 - Deploy Vercel attivo
 - Tutta la documentazione strategica + spec per-screen + backend design **già scritte**
 - Backend NON ancora implementato — è il prossimo passo
+
+**Architettura UI corrente:**
+- **2 pillar**: IO (Home · Mappa · Feed · Garage) + GRUPPO (Gruppo · Pianifica · Cordata · Storia · Diario)
+- **Toggle IO↔GRUPPO** nell'Header (pillola compatta, no più striscia in bottom nav)
+- **Drawer hamburger**: Profilo · Eventi · Classifica · Impostazioni · Privacy
 
 ---
 

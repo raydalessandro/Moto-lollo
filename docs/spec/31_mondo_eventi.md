@@ -1,8 +1,12 @@
-# 31 · mondo.eventi — Eventi big curati
+# 31 · Eventi — drawer (ex mondo.eventi)
+
+> **Nota IA (2026-05-14):** dopo lo scioglimento del pillar MONDO, questa schermata è una **destinazione del drawer hamburger** (`drawer.eventi`), non più una tab bottom nav. Aperta come overlay fullscreen tipo Profilo/Impostazioni.
 
 ## Purpose
 
 Lista eventi big curati dalla redazione dell'app (raduni nazionali, EICMA, track day organizzati). **Non** sono i GroupRide (quelli sono privati per il gruppo). Sono eventi pubblici a partecipazione aperta.
+
+Visita poco frequente (esplorazione occasionale) → drawer destination, non tab core.
 
 File implementazione: `src/features/mondo/EventiScreen.tsx`.
 
