@@ -136,15 +136,16 @@ interface PlannedSeed {
   tags: string[];
   daysAgo: number;
   waypointCount: number;
+  source: "manual" | "gpx";
 }
 
 const PLANNED: PlannedSeed[] = [
-  { id: "pr1", title: "Stelvio loop classico",    notes: "Partenza Bormio, discesa lato Prato.", distanceKm: 212, estimatedDurationMin: 330, visibility: "public",    tags: ["alpi","passi"],    daysAgo:  8, waypointCount: 6 },
-  { id: "pr2", title: "Tonale al tramonto",       distanceKm: 158, estimatedDurationMin: 240, visibility: "followers", tags: ["alpi","sunset"],   daysAgo: 14, waypointCount: 4 },
-  { id: "pr3", title: "Dolomiti slow",            notes: "Due giorni, sosta rifugio.",            distanceKm: 340, estimatedDurationMin: 540, visibility: "private",   tags: ["dolomiti","slow"], daysAgo: 26, waypointCount: 9 },
-  { id: "pr4", title: "Lago d'Iseo costa ovest",  distanceKm:  96, estimatedDurationMin: 160, visibility: "public",    tags: ["laghi","misto"],   daysAgo: 45, waypointCount: 3 },
-  { id: "pr5", title: "Notturna urbana Brescia",  notes: "Quando fa caldo.",                      distanceKm:  42, estimatedDurationMin:  75, visibility: "followers", tags: ["urban","night"],   daysAgo: 62, waypointCount: 5 },
-  { id: "pr6", title: "Tour dei passi bergamaschi", distanceKm: 185, estimatedDurationMin: 290, visibility: "public",    tags: ["alpi","tour"],     daysAgo: 90, waypointCount: 7 },
+  { id: "pr1", title: "Stelvio loop classico",      notes: "Partenza Bormio, discesa lato Prato.", distanceKm: 212, estimatedDurationMin: 330, visibility: "public",    tags: ["alpi","passi"],    daysAgo:  8, waypointCount: 6, source: "manual" },
+  { id: "pr2", title: "Tonale al tramonto",         distanceKm: 158, estimatedDurationMin: 240, visibility: "followers", tags: ["alpi","sunset"],   daysAgo: 14, waypointCount: 4, source: "gpx" },
+  { id: "pr3", title: "Dolomiti slow",              notes: "Due giorni, sosta rifugio.",            distanceKm: 340, estimatedDurationMin: 540, visibility: "private",   tags: ["dolomiti","slow"], daysAgo: 26, waypointCount: 9, source: "manual" },
+  { id: "pr4", title: "Lago d'Iseo costa ovest",    distanceKm:  96, estimatedDurationMin: 160, visibility: "public",    tags: ["laghi","misto"],   daysAgo: 45, waypointCount: 3, source: "gpx" },
+  { id: "pr5", title: "Notturna urbana Brescia",    notes: "Quando fa caldo.",                      distanceKm:  42, estimatedDurationMin:  75, visibility: "followers", tags: ["urban","night"],   daysAgo: 62, waypointCount: 5, source: "manual" },
+  { id: "pr6", title: "Tour dei passi bergamaschi", distanceKm: 185, estimatedDurationMin: 290, visibility: "public",    tags: ["alpi","tour"],     daysAgo: 90, waypointCount: 7, source: "gpx" },
 ];
 
 export function seedPlannedRoutes(): Record<UUID, PlannedRoute> {
@@ -168,6 +169,7 @@ export function seedPlannedRoutes(): Record<UUID, PlannedRoute> {
       visibility: p.visibility,
       tags: p.tags,
       createdAt: addDays(NOW, -p.daysAgo),
+      source: p.source,
     };
   }
   return out;

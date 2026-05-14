@@ -135,6 +135,8 @@ export interface Waypoint {
   label?: string;
 }
 
+export type PlannedRouteSource = "manual" | "gpx";
+
 export interface PlannedRoute {
   id: UUID;
   ownerId: UUID;
@@ -147,6 +149,8 @@ export interface PlannedRoute {
   visibility: Visibility;
   tags: string[];
   createdAt: ISODate;
+  /** How this route entered the user's archive. */
+  source: PlannedRouteSource;
 }
 
 // ─── Groups ─────────────────────────────────────────────────────────────────
