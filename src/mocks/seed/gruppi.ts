@@ -31,7 +31,12 @@ interface MembershipSeed {
 const MEMBERSHIPS: MembershipSeed[] = [
   // g1 Moto Garda (8 membri)
   { groupId: "g1", userId: "u_marco",   role: "leader", joinedDaysAgo: 700 },
-  { groupId: "g1", userId: "u0",        role: "member", joinedDaysAgo: 500 },
+  // HUMAN-DEFERRED: admin model — see PLAN.md §1.3
+  // Ray is promoted to admin of Moto Garda so we can exercise the admin UIs
+  // (validate route proposals, accept membership requests, publish to Mondo).
+  // In production this requires a DB migration: not every member becomes admin
+  // automatically; the role transition needs a real operation.
+  { groupId: "g1", userId: "u0",        role: "admin",  joinedDaysAgo: 500 },
   { groupId: "g1", userId: "u_giulia",  role: "member", joinedDaysAgo: 480 },
   { groupId: "g1", userId: "u_luca",    role: "admin",  joinedDaysAgo: 450 },
   { groupId: "g1", userId: "u_andrea",  role: "member", joinedDaysAgo: 400 },
