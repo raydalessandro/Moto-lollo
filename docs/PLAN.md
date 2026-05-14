@@ -4,6 +4,8 @@ Documento di riferimento per il refactor del front secondo la struttura definita
 
 **Ultimo aggiornamento decisioni:** sessione del check-point post-README, 13 punti chiariti con l'utente (Ray).
 
+**Stato refactor (2026-05-14):** Step 1–15 ✅ chiusi. Build verde su `main`. Resta solo §6 — riallineare Excel/E2E alla nuova struttura.
+
 ---
 
 ## 0. Stato di partenza
@@ -188,25 +190,25 @@ FULLSCREEN (fuori bottom nav)
 
 Ogni step = un commit. Cerco di mantenere il front sempre buildabile.
 
-| # | Titolo | Tocca | Effort |
-|---|---|---|---|
-| **1** | Header + hamburger drawer | `Header.tsx`, nuovo `HamburgerDrawer.tsx`, `AppShell.tsx` | S |
-| **2** | MONDO da 4 → 3 tab (rimuovo Profilo da bottom nav, sposto in drawer) | `pillars.ts`, `AppShell.tsx`, `FeedScreen.tsx` etc. invariate | S |
-| **3** | Rinomina `io.crea` → `io.registra`, hub a 4 vie + FAB "Naviga" (placeholder fullscreen) | `pillars.ts`, `CreaScreen.tsx` → `RegistraScreen.tsx` (nuova), il vecchio `RegistraScreen.tsx` viene assorbito | M |
-| **4** | `io.mappa` → archivio percorsi personali (lista PlannedRoute + saved + "pubblica" CTA) | `MappaScreen.tsx` (riscrittura), aggiungo `SavedRoute` type + seed + queries | M |
-| **5** | `io.home` fedele a HTML prototipo (stats, moto, ultima uscita con mini-mappa, promemoria, notifiche) | `HomeScreen.tsx` (riscrittura) | M |
-| **6** | Estendo `domain.ts`: nuovi tipi (RouteProposal, GroupMembershipRequest, RideBoardComment, SavedRoute) + campi (alsoForCars, scope, navigatorUserId, isPrivate, area, publicRoutesCount, counters). Seed minimo per ciascuno. | `domain.ts`, `seed/*.ts`, `queries.ts` | M |
-| **7** | Ray = admin di Garda + commenti `HUMAN-DEFERRED` | `seed/gruppi.ts`, `queries.ts` | S |
-| **8** | Nuova `GruppoListScreen` (elenco gruppi pubblici) e refactor `GruppoHomeScreen` con tab "profilo gruppo" per non-membri | nuovo file + refactor | M |
-| **9** | `gruppo.pianifica` split admin / member, bacheca commenti, propose route | `PianificaScreen.tsx`, mutazione `proposeRoute`, `submitBoardComment` | M |
-| **10** | `gruppo.cordata` fedele a HTML prototipo, navigatore designato dall'admin | `CordataScreen.tsx` | M |
-| **11** | `gruppo.storia` con timer 24h+30g, transizione visibile → Diario | `StoriaScreen.tsx`, helper `isStoryStillActive(group, now)` | M |
-| **12** | `mondo.classifica` da utenti a **percorsi** (sorting likes/saves/nav, filtri) | `ClassificaScreen.tsx` (riscrittura) | M |
-| **13** | `mondo.feed` filtro "anche per auto" + filtro area + filtro tag | `FeedScreen.tsx` | S |
-| **14** | Fullscreen `navigation.live` (placeholder Mapbox con simulazione, no token reale) | nuovo `app/navigation/page.tsx` o state fullscreen in AppShell | L |
-| **15** | Profilo accessibile da drawer (riusa ProfiloScreen, niente nav) | routing client-side dentro AppShell | S |
+| # | Titolo | Tocca | Effort | Stato |
+|---|---|---|---|---|
+| **1** | Header + hamburger drawer | `Header.tsx`, nuovo `HamburgerDrawer.tsx`, `AppShell.tsx` | S | ✅ |
+| **2** | MONDO da 4 → 3 tab (rimuovo Profilo da bottom nav, sposto in drawer) | `pillars.ts`, `AppShell.tsx`, `FeedScreen.tsx` etc. invariate | S | ✅ |
+| **3** | Rinomina `io.crea` → `io.registra`, hub a 4 vie + FAB "Naviga" (placeholder fullscreen) | `pillars.ts`, `CreaScreen.tsx` → `RegistraScreen.tsx` (nuova), il vecchio `RegistraScreen.tsx` viene assorbito | M | ✅ |
+| **4** | `io.mappa` → archivio percorsi personali (lista PlannedRoute + saved + "pubblica" CTA) | `MappaScreen.tsx` (riscrittura), aggiungo `SavedRoute` type + seed + queries | M | ✅ |
+| **5** | `io.home` fedele a HTML prototipo (stats, moto, ultima uscita con mini-mappa, promemoria, notifiche) | `HomeScreen.tsx` (riscrittura) | M | ✅ |
+| **6** | Estendo `domain.ts`: nuovi tipi (RouteProposal, GroupMembershipRequest, RideBoardComment, SavedRoute) + campi (alsoForCars, scope, navigatorUserId, isPrivate, area, publicRoutesCount, counters). Seed minimo per ciascuno. | `domain.ts`, `seed/*.ts`, `queries.ts` | M | ✅ |
+| **7** | Ray = admin di Garda + commenti `HUMAN-DEFERRED` | `seed/gruppi.ts`, `queries.ts` | S | ✅ |
+| **8** | Nuova `GruppoListScreen` (elenco gruppi pubblici) e refactor `GruppoHomeScreen` con tab "profilo gruppo" per non-membri | nuovo file + refactor | M | ✅ |
+| **9** | `gruppo.pianifica` split admin / member, bacheca commenti, propose route | `PianificaScreen.tsx`, mutazione `proposeRoute`, `submitBoardComment` | M | ✅ |
+| **10** | `gruppo.cordata` fedele a HTML prototipo, navigatore designato dall'admin | `CordataScreen.tsx` | M | ✅ |
+| **11** | `gruppo.storia` con timer 24h+30g, transizione visibile → Diario | `StoriaScreen.tsx`, helper `isStoryStillActive(group, now)` | M | ✅ |
+| **12** | `mondo.classifica` da utenti a **percorsi** (sorting likes/saves/nav, filtri) | `ClassificaScreen.tsx` (riscrittura) | M | ✅ |
+| **13** | `mondo.feed` filtro "anche per auto" + filtro area + filtro tag | `FeedScreen.tsx` | S | ✅ (alsoForCars; area/tag deferred) |
+| **14** | Fullscreen `navigation.live` (placeholder Mapbox con simulazione, no token reale) | nuovo `app/navigation/page.tsx` o state fullscreen in AppShell | L | ✅ |
+| **15** | Profilo accessibile da drawer (riusa ProfiloScreen, niente nav) | routing client-side dentro AppShell | S | ✅ |
 
-Dopo Step 15 → review visivo su Vercel insieme → eventuali fix.
+Dopo Step 15 → review visivo su Vercel insieme → eventuali fix. **Punto raggiunto.**
 
 ---
 
