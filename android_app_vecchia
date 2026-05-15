@@ -1,0 +1,134 @@
+# DriveShare — Android Native (Kotlin + Jetpack Compose)
+
+App per motociclisti: tracking GPS in background, waypoint con foto/note, import/export GPX, gestione garage moto.
+
+## Architettura
+
+```
+com.driveshare.app/
+├── data/
+│   ├── local/
+│   │   ├── dao/          ← Room DAOs (6: Route, TrackPoint, Waypoint, Motorcycle, Expiration, Maintenance)
+│   │   ├── entity/       ← Room Entities (6 tabelle)
+│   │   └── DriveShareDatabase.kt
+│   ├── gpx/
+│   │   └── GpxManager.kt ← Parser GPX (import) + Exporter GPX (export) + Haversine
+│   ├── model/
+│   │   └── Models.kt     ← Domain models (GeoPoint, TrackingState, RiderStats, etc.)
+│   └── repository/
+│       ├── RouteRepository.kt   ← Routes + TrackPoints + Waypoints + Stats
+│       └── GarageRepository.kt  ← Motorcycle + Expirations + Maintenances
+├── di/
+│   └── DatabaseModule.kt ← Hilt DI: Room DB + DAOs
+├── service/
+│   └── TrackingService.kt ← ⭐ Foreground Service: FusedLocationProvider, notification, state emission
+├── ui/
+│   ├── theme/            ← Material3 theme (Red600 primary, dark mode support)
+│   ├── navigation/       ← Screen sealed class + NavHost
+│   ├── components/       ← StatCard, OsmMapView (osmdroid wrapper)
+│   └── screens/
+│       ├── dashboard/    ← Stats overview, quick actions, upcoming expirations
+│       ├── tracking/     ← ⭐ Live tracking UI, start/pause/stop, waypoint dialog, Google Maps launch
+│       ├── routes/       ← Route list, GPX import, delete
+│       ├── routedetail/  ← Map + stats + waypoints + GPX export/share
+│       ├── garage/       ← Motorcycle, expirations, maintenances
+│       └── settings/     ← GPS interval, min distance, screen on, units
+├── util/
+│   └── Utils.kt          ← GeoUtils (haversine), FormatUtils (date, duration, distance, speed, currency)
+├── DriveShareApp.kt      ← Hilt Application, osmdroid config, notification channels
+└── MainActivity.kt       ← Scaffold + BottomNav + NavHost
+```
+
+## Stack Tecnologico
+
+| Layer | Tecnologia |
+|-------|-----------|
+| UI | Jetpack Compose + Material3 |
+| Navigation | Navigation Compose |
+| State | StateFlow + ViewModel |
+| DI | Hilt |
+| Database | Room (SQLite) |
+| Location | FusedLocationProviderClient (Play Services) |
+| Maps | osmdroid (OpenStreetMap — no API key) |
+| Images | Coil |
+| Permissions | Accompanist Permissions |
+| GPX | Custom XML parser (XmlPullParser) |
+| Background | Foreground Service (location type) |
+| Serialization | Kotlin Serialization |
+
+## Come funziona il Tracking
+
+1. L'utente preme "Avvia Tracking" → viene avviato un `Foreground Service` con notifica persistente
+2. Il service usa `FusedLocationProviderClient` con alta accuratezza (3s interval, 5m min distance)
+3. Ogni posizione viene salvata come `TrackPointEntity` nel Room DB
+4. Lo stato viene emesso via `StateFlow` statico (`TrackingService.trackingState`)
+5. L'utente può mettere in pausa, aggiungere waypoint con note/foto, aprire Google Maps
+6. A fine giro, il percorso viene salvato con stats aggregate (distanza, durata, velocità)
+
+## Flusso principale del rider
+
+```
+Dashboard → Avvia Tracking → [App va in background] → Rider usa Google Maps
+→ Si ferma → Torna sull'app → Aggiunge foto/nota al waypoint
+→ Riprende il giro → Fine → Salva percorso → Dettaglio con mappa e stats
+→ Esporta GPX / Condividi via share intent
+```
+
+## Database Schema
+
+```sql
+routes (id, title, description, distance_km, duration_seconds, avg_speed_kmh, max_speed_kmh, ...)
+track_points (id, route_id FK, latitude, longitude, altitude, speed, accuracy, bearing, timestamp, point_index)
+waypoints (id, route_id FK, latitude, longitude, title, note, photo_path, type, timestamp, sort_order)
+motorcycles (id, name, brand, model, year, license_plate, photo_path, total_km)
+expirations (id, motorcycle_id FK, type, expiration_date, notes, reminder_days_before)
+maintenances (id, motorcycle_id FK, type, date, km_at_service, cost, notes, next_due_date, next_due_km)
+```
+
+## TODO per Claude Code
+
+### Priorità ALTA (core funzionalità)
+- [ ] **CameraX integration**: implementare scatto foto nel waypoint dialog (TrackingScreen, RouteDetailScreen)
+- [ ] **DatePicker Material3**: aggiungere date picker nei dialog scadenze e manutenzioni (GarageScreen)
+- [ ] **DataStore persistence**: salvare settings (GPS interval, min distance, keep screen on, units) con DataStore e passarli al TrackingService
+- [ ] **OsmMapView migliorata**: mostrare polyline del tracking live (collegare i TrackPoints al map composable durante il tracking)
+- [ ] **Gestione permessi background location**: aggiungere richiesta `ACCESS_BACKGROUND_LOCATION` separata (Android 11+)
+
+### Priorità MEDIA (UX polish)
+- [ ] **Foto moto nel Garage**: implementare upload foto (camera o gallery) per la MotorcycleEntity
+- [ ] **Route editing**: permettere modifica titolo/descrizione dal RouteDetailScreen
+- [ ] **Waypoint editing/deletion**: swipe-to-delete e edit dialog per waypoint nel RouteDetailScreen
+- [ ] **Animazioni e transizioni**: aggiungere `AnimatedVisibility` e transizioni tra schermate
+- [ ] **Pull-to-refresh**: aggiungere refresh sulla lista percorsi
+- [ ] **Snackbar feedback**: mostrare snackbar per azioni (salvataggio, eliminazione, import completato)
+- [ ] **Empty states animati**: sostituire i placeholder statici con Lottie o animazioni Compose
+
+### Priorità BASSA (nice to have)
+- [ ] **WorkManager notifications**: notifiche push per scadenze in arrivo
+- [ ] **Dark mode toggle**: aggiungere switch esplicito nelle impostazioni
+- [ ] **Backup/restore DB**: export/import dell'intero database Room
+- [ ] **Filtri percorsi**: ricerca, ordinamento per data/distanza/durata
+- [ ] **Map tile caching**: pre-download tile per uso offline
+- [ ] **Elevation chart**: grafico altimetria nel RouteDetailScreen con una Canvas Compose
+- [ ] **Widget**: widget home screen con stats mensili e shortcut al tracking
+- [ ] **Wear OS companion**: (futuro) integrazione con smartwatch per stats polso
+
+### Bug noti / Attenzione
+- `GpxManager`: il tag GPX usa `<n>` invece di `<name>` per evitare conflitto con namespace — verificare compatibilità con parser GPX di terze parti
+- `OsmMapView`: il composable ricrea la MapView ad ogni recomposition — potrebbe servire un `remember` più aggressivo con `key`
+- `TrackingService`: il `processLocation` filtra accuracy > 50m e jump > 1km — parametrizzare
+- `RoutesViewModel.importGpx`: il mime type `*/*` è troppo permissivo — filtrare per .gpx extension
+
+## Build & Run
+
+1. Apri il progetto in Android Studio (Ladybug o successivo)
+2. Sync Gradle
+3. Run su dispositivo fisico (emulatore non ha GPS affidabile)
+4. Concedi permessi localizzazione quando richiesto
+
+## Struttura Gradle
+
+- `compileSdk = 35`, `minSdk = 26`, `targetSdk = 35`
+- Kotlin 2.1.0, Compose BOM 2024.12.01
+- KSP per Room compiler e Hilt compiler
+- Proguard configurato per release builds
