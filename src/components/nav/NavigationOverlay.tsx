@@ -1,7 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "./Icon";
+import { MapView } from "@/components/map/MapView";
+import { useGeolocation, haversineMeters } from "@/lib/geolocation";
+import { useWakeLock } from "@/lib/wake-lock";
+import {
+  isMapboxConfigured,
+  encodePolyline,
+  geocode,
+  getDirections,
+  type DirectionsRoute,
+} from "@/lib/mapbox";
 
 export type NavMode =
   | { kind: "tracking"; title?: string }
@@ -14,29 +24,110 @@ interface NavigationOverlayProps {
 }
 
 /**
- * Fullscreen navigation/tracking overlay. Mock only — there is no Mapbox
- * token yet. Simulates a live ride with a 1-second tick that grows km,
- * speed and elapsed time. Real Mapbox + GPS land when wiring Supabase.
+ * Fullscreen tracking/navigation overlay.
+ *
+ * Quando `NEXT_PUBLIC_MAPBOX_TOKEN` è configurato:
+ * - mappa Mapbox GL JS reale
+ * - posizione GPS reale via navigator.geolocation
+ * - polyline live registrata mentre guidi
+ * - turn-by-turn da Mapbox Directions per kind=navigation
+ * - Wake Lock per tenere acceso lo schermo
+ *
+ * Senza token: fallback a SVG procedurale + simulazione (come prima).
  */
 export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
   const [paused, setPaused] = useState(false);
   const [elapsedSec, setElapsedSec] = useState(0);
-  const [km, setKm] = useState(0);
-  const [speed, setSpeed] = useState(42);
+  const [points, setPoints] = useState<Array<{ lat: number; lon: number; t: number }>>(
+    [],
+  );
+  const [destinationCoord, setDestinationCoord] = useState<[number, number] | null>(
+    null,
+  );
+  const [route, setRoute] = useState<DirectionsRoute | null>(null);
 
+  const mapboxOn = isMapboxConfigured();
+
+  // Wake lock: attivo quando overlay è aperto e non in pausa.
+  useWakeLock(!paused);
+
+  // GPS: attivo solo quando Mapbox è configurato e non in pausa.
+  const geo = useGeolocation(mapboxOn && !paused);
+
+  // Time tick (always running unless paused).
   useEffect(() => {
     if (paused) return;
-    const id = setInterval(() => {
-      setElapsedSec((s) => s + 1);
-      setKm((k) => k + Math.max(0, speed / 3600));
-      // Speed wanders a bit between 30 and 95.
-      setSpeed((v) => {
-        const next = v + (Math.random() - 0.5) * 6;
-        return Math.max(28, Math.min(95, next));
-      });
-    }, 1000);
+    const id = setInterval(() => setElapsedSec((s) => s + 1), 1000);
     return () => clearInterval(id);
-  }, [paused, speed]);
+  }, [paused]);
+
+  // Append GPS points (with simple accuracy + dedup filter).
+  useEffect(() => {
+    if (!geo.position) return;
+    const p = geo.position;
+    if (p.accuracy > 50) return; // skip noisy fix
+    setPoints((prev) => {
+      const last = prev[prev.length - 1];
+      if (last && last.lat === p.lat && last.lon === p.lon) return prev;
+      // Skip if too close (< 5m, GPS noise on standstill).
+      if (last && haversineMeters(last, { lat: p.lat, lon: p.lon }) < 5) return prev;
+      return [...prev, { lat: p.lat, lon: p.lon, t: p.t }];
+    });
+  }, [geo.position]);
+
+  // Geocode + directions for "navigation" mode at first GPS fix.
+  useEffect(() => {
+    if (mode.kind !== "navigation" || !mapboxOn) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const proximity: [number, number] | undefined = geo.position
+          ? [geo.position.lon, geo.position.lat]
+          : undefined;
+        const results = await geocode(mode.destination, { proximity, limit: 1 });
+        if (cancelled || results.length === 0) return;
+        const dest = results[0].center;
+        setDestinationCoord(dest);
+
+        if (geo.position) {
+          const r = await getDirections({
+            origin: [geo.position.lon, geo.position.lat],
+            destination: dest,
+          });
+          if (!cancelled && r) setRoute(r);
+        }
+      } catch (e) {
+        console.warn("Geocode/Directions failed:", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, mapboxOn, geo.position?.lat, geo.position?.lon]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Derived stats from real GPS points.
+  const distanceKm = useMemo(() => {
+    if (points.length < 2) return 0;
+    let m = 0;
+    for (let i = 1; i < points.length; i++) {
+      m += haversineMeters(points[i - 1], points[i]);
+    }
+    return m / 1000;
+  }, [points]);
+
+  const speedKmh = useMemo(() => {
+    if (mapboxOn && geo.position?.speed != null && geo.position.speed >= 0) {
+      return geo.position.speed * 3.6;
+    }
+    if (mapboxOn) return 0;
+    // Simulation fallback (no token / no GPS): wandering value.
+    return 42 + Math.sin(elapsedSec / 10) * 30;
+  }, [mapboxOn, geo.position, elapsedSec]);
+
+  const livePolyline = useMemo(
+    () => encodePolyline(points.map((p) => [p.lon, p.lat])),
+    [points],
+  );
 
   const accent = mode.kind === "cordata" ? mode.accent : "var(--ember)";
   const elapsedH = Math.floor(elapsedSec / 3600);
@@ -56,6 +147,10 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
       : mode.kind === "navigation"
         ? "Turn-by-turn"
         : mode.rideTitle;
+
+  // Next maneuver: prima istruzione del route. TODO: avanzare lo step
+  // man mano che la posizione si avvicina al successivo punto-svolta.
+  const nextStep = mode.kind === "navigation" ? route?.steps[0] : undefined;
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col bg-bg">
@@ -83,6 +178,9 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
               style={{ color: accent }}
             >
               {mode.kind.toUpperCase()}
+              {mapboxOn && geo.status === "watching" && " · GPS"}
+              {mapboxOn && geo.status === "denied" && " · GPS denied"}
+              {mapboxOn && geo.status === "requesting" && " · GPS…"}
             </span>
           </div>
           <span className="font-display text-[13px] font-semibold">{title}</span>
@@ -90,18 +188,43 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
         <span className="w-9" />
       </header>
 
-      {/* Mock map area */}
+      {/* Map area (Mapbox real or SVG fallback) */}
       <div className="relative flex-1 overflow-hidden">
-        <MapBackdrop accent={accent} />
-        <NextManeuverBanner mode={mode} accent={accent} />
-        <SpeedBubble speed={speed} accent={accent} />
+        <MapView
+          userLocation={
+            geo.position
+              ? {
+                  lat: geo.position.lat,
+                  lon: geo.position.lon,
+                  heading: geo.position.heading,
+                }
+              : undefined
+          }
+          routePolyline={route?.polyline}
+          livePolyline={livePolyline || undefined}
+          destination={destinationCoord ?? undefined}
+          fallback={<MapBackdropFallback accent={accent} mode={mode} />}
+        >
+          <NextManeuverBanner step={nextStep} accent={accent} />
+          <SpeedBubble speed={speedKmh} accent={accent} />
+          {mapboxOn && geo.status === "denied" && (
+            <div className="absolute left-3 right-3 top-3 rounded-xl border border-danger/40 bg-bg/90 px-3 py-2 text-center text-[11px] text-danger backdrop-blur-sm">
+              Permesso GPS negato. Riattivalo dalle impostazioni del browser.
+            </div>
+          )}
+        </MapView>
       </div>
 
       {/* HUD */}
       <div className="shrink-0 border-t border-line bg-bg">
         <div className="grid grid-cols-3 border-b border-line">
           {[
-            { label: subtitle, value: km.toFixed(1), unit: "km", color: accent },
+            {
+              label: subtitle,
+              value: distanceKm.toFixed(1),
+              unit: "km",
+              color: accent,
+            },
             {
               label: "tempo",
               value: `${elapsedH > 0 ? elapsedH + "h " : ""}${String(elapsedM).padStart(2, "0")}:${String(elapsedS).padStart(2, "0")}`,
@@ -109,9 +232,10 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
             },
             {
               label: "media",
-              value: km > 0 && elapsedSec > 0
-                ? ((km / (elapsedSec / 3600))).toFixed(0)
-                : "0",
+              value:
+                distanceKm > 0 && elapsedSec > 0
+                  ? (distanceKm / (elapsedSec / 3600)).toFixed(0)
+                  : "0",
               unit: "km/h",
             },
           ].map((h, i) => (
@@ -170,19 +294,16 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
   );
 }
 
-// ─── Visual mock pieces ─────────────────────────────────────────────────────
+// ─── Visual fallback (when token mancante) ──────────────────────────────────
 
-function MapBackdrop({ accent }: { accent: string }) {
-  // Procedural "map": dark background with topographic contour lines and an
-  // ember route. Same vibe as the prototype's MiniMap, scaled fullscreen.
+function MapBackdropFallback({ accent, mode }: { accent: string; mode: NavMode }) {
   return (
     <svg
       viewBox="0 0 360 600"
       preserveAspectRatio="xMidYMid slice"
-      className="h-full w-full"
+      className="absolute inset-0 h-full w-full"
       style={{ background: "radial-gradient(circle at 50% 70%, #14110d 0%, #050403 70%)" }}
     >
-      {/* topo contours */}
       <g stroke="rgba(255,255,255,0.04)" strokeWidth={1} fill="none">
         {Array.from({ length: 8 }).map((_, i) => {
           const y = 30 + i * 70;
@@ -194,7 +315,6 @@ function MapBackdrop({ accent }: { accent: string }) {
           );
         })}
       </g>
-      {/* dotted compass center */}
       <circle
         cx={180}
         cy={420}
@@ -205,7 +325,6 @@ function MapBackdrop({ accent }: { accent: string }) {
         strokeDasharray="4 6"
       />
       <circle cx={180} cy={420} r={6} fill={accent} stroke="var(--bg)" strokeWidth={3} />
-      {/* route path */}
       <path
         d="M180 420 Q 220 320 200 240 Q 180 160 240 100 Q 280 60 300 30"
         fill="none"
@@ -215,25 +334,25 @@ function MapBackdrop({ accent }: { accent: string }) {
         strokeLinejoin="round"
         opacity={0.9}
       />
-      <path
-        d="M180 420 Q 220 320 200 240 Q 180 160 240 100 Q 280 60 300 30"
-        fill="none"
-        stroke={accent}
-        strokeWidth={10}
-        strokeLinecap="round"
-        opacity={0.18}
-      />
-      {/* destination flag */}
-      <g transform="translate(300, 30)">
-        <circle r={7} fill={accent} stroke="var(--bg)" strokeWidth={3} />
-        <circle r={14} fill="none" stroke={accent} strokeOpacity={0.5} />
-      </g>
+      {mode.kind === "navigation" && (
+        <g transform="translate(300, 30)">
+          <circle r={7} fill={accent} stroke="var(--bg)" strokeWidth={3} />
+          <circle r={14} fill="none" stroke={accent} strokeOpacity={0.5} />
+        </g>
+      )}
     </svg>
   );
 }
 
-function NextManeuverBanner({ mode, accent }: { mode: NavMode; accent: string }) {
-  if (mode.kind !== "navigation") return null;
+function NextManeuverBanner({
+  step,
+  accent,
+}: {
+  step?: { instruction: string; distanceM: number };
+  accent: string;
+}) {
+  if (!step) return null;
+  const km = (step.distanceM / 1000).toFixed(1);
   return (
     <div
       className="absolute left-3 right-3 top-3 flex items-center gap-3 rounded-xl border px-3 py-3"
@@ -250,22 +369,13 @@ function NextManeuverBanner({ mode, accent }: { mode: NavMode; accent: string })
       >
         <Icon d="M3 12h13 M13 6l6 6-6 6" size={20} />
       </div>
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <div className="font-mono text-[9px] uppercase tracking-widest text-ink-dim">
-          tra 800 m
+          tra {step.distanceM < 1000 ? `${Math.round(step.distanceM)} m` : `${km} km`}
         </div>
-        <div className="font-display text-sm font-semibold">
-          Svolta a destra · SP668
+        <div className="truncate font-display text-sm font-semibold">
+          {step.instruction}
         </div>
-      </div>
-      <div
-        className="font-display text-lg font-medium tabular-nums"
-        style={{ color: accent }}
-      >
-        0.8
-        <span className="ml-0.5 font-mono text-[9px] uppercase tracking-widest text-ink-dim">
-          km
-        </span>
       </div>
     </div>
   );

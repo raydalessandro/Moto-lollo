@@ -24,6 +24,41 @@ export function isMapboxConfigured(): boolean {
   return MAPBOX_TOKEN.length > 0;
 }
 
+// ─── Polyline encoder/decoder (Google polyline format, precision 5) ────────
+
+/**
+ * Encode una sequenza di punti [lon, lat] in polyline string (Google
+ * polyline algorithm, precision 5). Stesso formato di Mapbox.
+ */
+export function encodePolyline(points: Array<[number, number]>, precision = 5): string {
+  if (points.length === 0) return "";
+  const factor = Math.pow(10, precision);
+  let prevLat = 0;
+  let prevLon = 0;
+  let output = "";
+
+  for (const [lon, lat] of points) {
+    const intLat = Math.round(lat * factor);
+    const intLon = Math.round(lon * factor);
+    output += encodeNumber(intLat - prevLat);
+    output += encodeNumber(intLon - prevLon);
+    prevLat = intLat;
+    prevLon = intLon;
+  }
+  return output;
+}
+
+function encodeNumber(num: number): string {
+  let n = num < 0 ? ~(num << 1) : num << 1;
+  let result = "";
+  while (n >= 0x20) {
+    result += String.fromCharCode((0x20 | (n & 0x1f)) + 63);
+    n >>>= 5;
+  }
+  result += String.fromCharCode(n + 63);
+  return result;
+}
+
 // ─── Static Image API (per mini-mappe nelle card) ───────────────────────────
 
 export interface StaticMapOptions {
