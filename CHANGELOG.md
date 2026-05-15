@@ -9,16 +9,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Versioning [Se
 ## [Unreleased]
 
 ### Aggiunto
-- **Mapbox scaffolding** (pronto per il wiring quando il token sarà disponibile su Vercel):
-  - Dipendenza `mapbox-gl` + `@types/mapbox-gl`
-  - `src/lib/mapbox.ts`: helper per token, Static Images URL, Geocoding, Directions
+- **Stack mappe open-source completa** (in sostituzione di Mapbox dopo problemi inspiegabili lato account):
+  - Dipendenza `maplibre-gl` (al posto di `mapbox-gl` + types)
+  - Tile rendering: [MapLibre GL JS](https://maplibre.org/) + [OpenFreeMap](https://openfreemap.org/) — zero signup, tile illimitate
+  - Geocoding + Directions: [OpenRouteService](https://openrouteservice.org/) — signup gratuito, 1k/2k req/giorno
+  - `src/lib/maps.ts`: helper provider-neutral per tile style, geocoding (ORS Pelias), directions (ORS), polyline encode/decode
   - `src/lib/wake-lock.ts`: hook `useWakeLock(active)` per tenere acceso lo schermo durante tracking
   - `src/lib/geolocation.ts`: hook `useGeolocation(watching)` + helper `haversineMeters()`
-  - `src/components/map/MapView.tsx`: mappa interattiva Mapbox GL JS con dynamic import, layer per user position / route / live trail / destination. Fallback gradient scuro quando token mancante.
-  - `src/components/map/StaticMap.tsx`: mini-mappa via Mapbox Static Images. Fallback SVG procedurale (identico al mock attuale) quando token mancante.
-  - `.env.local.example`: template variabili
+  - `src/components/map/MapView.tsx`: mappa interattiva MapLibre con dynamic import, layer per user position / route / live trail / destination
+  - `src/components/map/StaticMap.tsx`: mini-mappa procedurale SVG (in futuro: Maptiler Static API quando avremo polyline reali)
+  - `.env.local.example`: template `NEXT_PUBLIC_ORS_TOKEN`
+- **NavigationOverlay wirato con stack reale**: mappa MapLibre, GPS browser, Wake Lock, polyline live registrata, turn-by-turn ORS per modalità Naviga
 - **Post social** nel Feed: `PublishedRoute` polimorfica via `kind: "route" | "post"`. Post hanno body + foto + opzionale percorso linked. Solo "route" entrano in Classifica.
 - **io.mappa** quadripartita: Creati / Caricati / Fatti / Salvati. Nuovo campo `PlannedRoute.source: "manual" | "gpx"`.
+
+### Cambiato dopo decisione iniziale
+- **Map provider stack**: da Mapbox (free tier 50k tiles + 100k geocoding + 100k directions) a MapLibre + OpenFreeMap + OpenRouteService (tiles illimitate + 1k geocoding/giorno + 2k directions/giorno). Motivo: account Mapbox di Ray ha presentato anomalie persistenti (tutti gli style ufficiali rispondevano "Style not found" da API REST, nonostante token tecnicamente valido). API praticamente identica → swap retrocompatibile, se Mapbox account si sblocca in futuro si può tornare con 30 min di lavoro.
 
 ### Cambiato
 - **Information Architecture: da 3 pillar a 2 pillar**. Il pillar MONDO è stato sciolto:

@@ -20,21 +20,26 @@
 
 ---
 
-## Prossimo passo: **integrazione Mapbox** (Step 1-2 della rampa pre-backend)
+## Prossimo passo: **completare la navigazione** + ottenere chiave OpenRouteService
 
-Lo scaffolding Mapbox è già in repo:
-- `src/lib/mapbox.ts` · `src/lib/wake-lock.ts` · `src/lib/geolocation.ts`
-- `src/components/map/MapView.tsx` · `StaticMap.tsx`
-- `mapbox-gl` come dependency
-- `.env.local.example` con `NEXT_PUBLIC_MAPBOX_TOKEN`
+Stack mappe ora attiva:
+- **Tile**: MapLibre GL JS + OpenFreeMap (zero signup, funziona già)
+- **Geocoding + Directions**: OpenRouteService (richiede API key gratuita)
+- File: `src/lib/maps.ts`, `src/lib/wake-lock.ts`, `src/lib/geolocation.ts`
+- Componenti: `src/components/map/MapView.tsx` + `StaticMap.tsx`
+- Wiring già fatto in `NavigationOverlay.tsx`
 
-**In attesa di:** Ray fornisce il token. Setup:
-1. Crea account su [mapbox.com](https://mapbox.com)
-2. Dashboard → Access Tokens → crea public token (`pk.*`) con URL restriction su `localhost:*` + `*.vercel.app`
-3. Su Vercel: Settings → Environment Variables → aggiungi `NEXT_PUBLIC_MAPBOX_TOKEN`
-4. Mi dai go → wiring di MapView in NavigationOverlay + StaticMap nelle card
+**In attesa:** Ray fornisce l'API key ORS. Setup:
+1. Signup gratuito su [openrouteservice.org/dev/#/signup](https://openrouteservice.org/dev/#/signup)
+2. Dashboard → "Tokens" → "Create new token" → copia
+3. Su Vercel: Settings → Environment Variables → aggiungi `NEXT_PUBLIC_ORS_TOKEN`
+4. Redeploy → modalità "Naviga" attiva con search destinazione + turn-by-turn
 
-Senza token l'app funziona com'è ora (fallback SVG).
+**Senza ORS key:** tile e GPS funzionano comunque (utile per la modalità "Registra mentre guidi").
+
+### Storia: perché non Mapbox
+
+Inizialmente avevamo integrato Mapbox GL JS. L'account Mapbox di Ray ha presentato anomalie inspiegabili (tutte le richieste ai default style ufficiali rispondevano "Style not found") nonostante token valido, email verificata, account in ordine. Dopo ~2 ore di debug abbiamo deciso di switchare allo stack alternativo open-source. Riferimenti API praticamente identiche: se l'account Mapbox in futuro si sblocca, possiamo tornare a Mapbox in 30 minuti (MapLibre legge anche le tile Mapbox).
 
 ### Step successivi (dopo Mapbox)
 

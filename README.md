@@ -18,7 +18,7 @@ Vedi [`HANDOFF.md`](./HANDOFF.md) per il punto di apertura sessione e [`docs/ROA
 |-------|------|
 | Front | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind 4 |
 | Mock data | In-memory PRNG deterministico (mulberry32) via React Context |
-| Mappe (Fase 1+) | Mapbox GL JS + Directions + Geocoding |
+| Mappe | MapLibre GL JS + OpenFreeMap (tile) + OpenRouteService (geocoding/directions) |
 | Backend (Fase 1+) | Supabase (Postgres + RLS + Auth + Storage + Realtime) |
 | Deploy | Vercel · PWA installabile |
 
@@ -38,13 +38,20 @@ npm run lint           # eslint
 
 L'app è pensata per viewport mobile (max-width 768). Apri dev tools in modalità mobile per esperienza realistica.
 
-### Environment variables
+### Map stack & environment variables
+
+L'app usa una stack 100% gratuita per le mappe:
+
+- **Tile rendering**: [MapLibre GL JS](https://maplibre.org/) + [OpenFreeMap](https://openfreemap.org/) — zero signup, tile illimitate
+- **Geocoding + Directions**: [OpenRouteService](https://openrouteservice.org/) — signup gratuito → API key, 1000 geocoding/giorno + 2000 directions/giorno
 
 | Variabile | Quando serve | Note |
 |-----------|--------------|------|
-| `NEXT_PUBLIC_MAPBOX_TOKEN` | quando vuoi mappe reali (NavigationOverlay, mini-mappe) | Public token da [account.mapbox.com](https://account.mapbox.com/access-tokens/). URL restrict: `localhost:*` + `*.vercel.app` + eventuale domain. Se vuoto: l'app fa fallback ai mock SVG (esperienza identica all'attuale). |
+| `NEXT_PUBLIC_ORS_TOKEN` | quando vuoi search destinazione + turn-by-turn nella modalità "Naviga" | API key OpenRouteService. Se vuoto: la mappa e il GPS funzionano lo stesso, ma "Naviga" non potrà calcolare route. |
 
-Su Vercel: Settings → Environment Variables → aggiungi `NEXT_PUBLIC_MAPBOX_TOKEN` per Production + Preview + Development.
+Tile e GPS funzionano **sempre** senza alcun token. Setup ORS richiede signup di 30 secondi su [openrouteservice.org/dev/#/signup](https://openrouteservice.org/dev/#/signup).
+
+Su Vercel: Settings → Environment Variables → aggiungi `NEXT_PUBLIC_ORS_TOKEN` per Production + Preview.
 
 ---
 

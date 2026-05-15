@@ -6,12 +6,12 @@ import { MapView } from "@/components/map/MapView";
 import { useGeolocation, haversineMeters } from "@/lib/geolocation";
 import { useWakeLock } from "@/lib/wake-lock";
 import {
-  isMapboxConfigured,
+  hasRoutingApi,
   encodePolyline,
   geocode,
   getDirections,
   type DirectionsRoute,
-} from "@/lib/mapbox";
+} from "@/lib/maps";
 
 export type NavMode =
   | { kind: "tracking"; title?: string }
@@ -26,14 +26,13 @@ interface NavigationOverlayProps {
 /**
  * Fullscreen tracking/navigation overlay.
  *
- * Quando `NEXT_PUBLIC_MAPBOX_TOKEN` è configurato:
- * - mappa Mapbox GL JS reale
- * - posizione GPS reale via navigator.geolocation
- * - polyline live registrata mentre guidi
- * - turn-by-turn da Mapbox Directions per kind=navigation
+ * - Mappa MapLibre GL JS reale (tile da OpenFreeMap, gratis)
+ * - Posizione GPS reale via navigator.geolocation
+ * - Polyline live registrata mentre guidi
+ * - Turn-by-turn da OpenRouteService per kind=navigation (richiede ORS key)
  * - Wake Lock per tenere acceso lo schermo
  *
- * Senza token: fallback a SVG procedurale + simulazione (come prima).
+ * Senza ORS key: tile e GPS funzionano, ma niente turn-by-turn.
  */
 export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
   const [paused, setPaused] = useState(false);
@@ -46,13 +45,13 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
   );
   const [route, setRoute] = useState<DirectionsRoute | null>(null);
 
-  const mapboxOn = isMapboxConfigured();
+  const routingOn = hasRoutingApi();
 
   // Wake lock: attivo quando overlay è aperto e non in pausa.
   useWakeLock(!paused);
 
-  // GPS: attivo solo quando Mapbox è configurato e non in pausa.
-  const geo = useGeolocation(mapboxOn && !paused);
+  // GPS: attivo quando overlay aperto e non in pausa.
+  const geo = useGeolocation(!paused);
 
   // Time tick (always running unless paused).
   useEffect(() => {
@@ -77,7 +76,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
 
   // Geocode + directions for "navigation" mode at first GPS fix.
   useEffect(() => {
-    if (mode.kind !== "navigation" || !mapboxOn) return;
+    if (mode.kind !== "navigation" || !routingOn) return;
     let cancelled = false;
     (async () => {
       try {
@@ -103,7 +102,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
     return () => {
       cancelled = true;
     };
-  }, [mode, mapboxOn, geo.position?.lat, geo.position?.lon]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mode, routingOn, geo.position?.lat, geo.position?.lon]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derived stats from real GPS points.
   const distanceKm = useMemo(() => {
@@ -116,13 +115,11 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
   }, [points]);
 
   const speedKmh = useMemo(() => {
-    if (mapboxOn && geo.position?.speed != null && geo.position.speed >= 0) {
+    if (geo.position?.speed != null && geo.position.speed >= 0) {
       return geo.position.speed * 3.6;
     }
-    if (mapboxOn) return 0;
-    // Simulation fallback (no token / no GPS): wandering value.
-    return 42 + Math.sin(elapsedSec / 10) * 30;
-  }, [mapboxOn, geo.position, elapsedSec]);
+    return 0;
+  }, [geo.position]);
 
   const livePolyline = useMemo(
     () => encodePolyline(points.map((p) => [p.lon, p.lat])),
@@ -178,9 +175,9 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
               style={{ color: accent }}
             >
               {mode.kind.toUpperCase()}
-              {mapboxOn && geo.status === "watching" && " · GPS"}
-              {mapboxOn && geo.status === "denied" && " · GPS denied"}
-              {mapboxOn && geo.status === "requesting" && " · GPS…"}
+              {geo.status === "watching" && " · GPS"}
+              {geo.status === "denied" && " · GPS denied"}
+              {geo.status === "requesting" && " · GPS…"}
             </span>
           </div>
           <span className="font-display text-[13px] font-semibold">{title}</span>
@@ -207,7 +204,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
         >
           <NextManeuverBanner step={nextStep} accent={accent} />
           <SpeedBubble speed={speedKmh} accent={accent} />
-          {mapboxOn && geo.status === "denied" && (
+          {geo.status === "denied" && (
             <div className="absolute left-3 right-3 top-3 rounded-xl border border-danger/40 bg-bg/90 px-3 py-2 text-center text-[11px] text-danger backdrop-blur-sm">
               Permesso GPS negato. Riattivalo dalle impostazioni del browser.
             </div>

@@ -1,11 +1,9 @@
 "use client";
 
-import { isMapboxConfigured, buildStaticImageUrl } from "@/lib/mapbox";
-
 interface StaticMapProps {
   /** Seed numerico per il fallback SVG procedurale. */
   seed: number;
-  /** Mapbox polyline encoded, se disponibile (da Directions o Activity.trackPoints). */
+  /** Mapbox/Google polyline encoded (futuro: usato da provider static image). */
   polyline?: string;
   /** Pixel target. */
   width?: number;
@@ -14,43 +12,21 @@ interface StaticMapProps {
 }
 
 /**
- * Mini-mappa per card archivio / feed. Usa Mapbox Static Images se
- * `NEXT_PUBLIC_MAPBOX_TOKEN` è configurato, altrimenti fallback SVG
- * procedurale (compatibile col vecchio mock).
+ * Mini-mappa per le card archivio / feed.
  *
- * Static Images API costa 1 "static map request" per ogni img caricata
- * (free tier 50k/mese). Le card sono leggere → ok per scaling iniziale.
+ * Per ora: render sempre SVG polyline procedurale dal seed.
+ * In futuro: passeremo a Maptiler Static API o simile quando avremo
+ * polyline reali da Activity tracked.
  */
 export function StaticMap({
   seed,
-  polyline,
-  width = 320,
   height = 60,
   className = "",
 }: StaticMapProps) {
-  const configured = isMapboxConfigured();
-  const url =
-    configured && polyline ? buildStaticImageUrl({ polyline, width, height }) : "";
-
-  if (configured && url) {
-    return (
-      <img
-        src={url}
-        width={width}
-        height={height}
-        alt=""
-        className={`block h-full w-full object-cover ${className}`}
-        style={{ background: "#060503" }}
-        loading="lazy"
-      />
-    );
-  }
-
-  // Fallback: SVG polyline procedurale dal seed (com'era prima).
   return <FallbackSvgMap seed={seed} height={height} className={className} />;
 }
 
-// ─── Fallback procedurale (uguale ai mock attuali) ──────────────────────────
+// ─── Fallback procedurale ───────────────────────────────────────────────────
 
 function FallbackSvgMap({
   seed,

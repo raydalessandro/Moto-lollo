@@ -6,7 +6,7 @@ Documento di sintesi per disegnare il backend dell'app Moto-lollo. Integra:
 - Le 15 spec per-screen (read queries, RLS policies per-tabella)
 - I file del bundle legacy validi (`docs/sources/spec_bundle.zip`)
 
-**Output atteso da questo documento:** uno schema Postgres completo, le RLS policies, le RPC functions, la lista degli endpoint REST di Supabase, la configurazione di Auth/Storage/Realtime, e la setup di Mapbox.
+**Output atteso da questo documento:** uno schema Postgres completo, le RLS policies, le RPC functions, la lista degli endpoint REST di Supabase, la configurazione di Auth/Storage/Realtime, e la setup del map stack.
 
 ---
 
@@ -18,9 +18,9 @@ Documento di sintesi per disegnare il backend dell'app Moto-lollo. Integra:
 | Auth | **Supabase Auth** | email/password + magic link; Google OAuth in Fase 2 |
 | Storage | **Supabase Storage** | bucket dedicati per avatar, moto, activity media, GPX |
 | Realtime | **Supabase Realtime** | Postgres CDC + Broadcast channels (Cordata) |
-| Edge functions | **Supabase Edge Functions** (Deno) | webhook Mapbox proxy, GPX parser, cron job |
+| Edge functions | **Supabase Edge Functions** (Deno) | webhook maps proxy, GPX parser, cron job |
 | API | Supabase **PostgREST** auto-generato + **RPC** custom | Niente API custom Node a meno di esigenze specifiche |
-| Map | **Mapbox** (GL JS + Directions + Geocoding + Static Images) | Token gestito da proxy |
+| Map | **MapLibre GL JS** + **OpenFreeMap** (tiles) + **OpenRouteService** (geocoding/directions) | ORS token proxato via Edge Function in Fase 4+ |
 | Push | **Web Push API** (VAPID keys) | iOS solo dopo PWA install + iOS 16.4+ |
 | Email | **Resend** o Supabase SMTP | transazionali (verify, deletion confirm) |
 | Monitoring | **Sentry** (frontend) + Supabase logs | Fase 6 |
@@ -398,7 +398,7 @@ delete_account(p_password text) → void  -- soft-delete + schedule hard-delete
 
 -- Utility
 geocode_proxy(p_query text, p_proximity geography DEFAULT NULL) → json
-mapbox_directions_proxy(p_origin, p_destination, p_profile) → json
+maps_directions_proxy(p_origin, p_destination, p_profile) → json
 ```
 
 ---
@@ -527,45 +527,65 @@ $$ LANGUAGE plpgsql STABLE;
 
 ---
 
-## 9. Mapbox setup
+## 9. Map stack
+
+### Provider scelti (Fase 1)
+
+| Funzione | Provider | Free tier | Token richiesto |
+|----------|----------|-----------|-----------------|
+| Tile rendering | [OpenFreeMap](https://openfreemap.org/) (via MapLibre GL JS) | illimitato | no |
+| Geocoding (search destinazione) | [OpenRouteService](https://openrouteservice.org/) | 1000/giorno | sì (API key) |
+| Directions (turn-by-turn) | [OpenRouteService](https://openrouteservice.org/) | 2000/giorno | sì (stesso key) |
+| Static images (mini-mappe card) | (TODO Fase 5) Maptiler o Stadia | 100k/mese | sì |
+
+**Storia decisionale**: inizialmente avevamo scelto Mapbox per tutti e quattro i servizi (50k/100k/100k/50k free tier, single provider). L'account Mapbox di Ray ha presentato anomalie persistenti — tutti i request agli style ufficiali (`mapbox/streets-v12`, `mapbox/dark-v11`, `mapbox/standard`) rispondevano "Style not found" via REST API, nonostante token tecnicamente valido, email verificata, billing attivo. Dopo ~2 ore di debug abbiamo switchato all'open-source stack. Riferimenti API sono praticamente identici (MapLibre è un fork di Mapbox GL JS pre-licenza-change, ORS Geocoding usa Pelias engine compatibile con Mapbox response format).
+
+Se l'account Mapbox in futuro si sblocca, swap-back richiede ~30 min: MapLibre può consumare anche tile Mapbox (cambia solo `style` URL) e i wrapper `geocode()` / `getDirections()` in `src/lib/maps.ts` hanno API agnostiche, basta riscriverne il body.
 
 ### Token strategy
 
-Due token Mapbox:
-1. **Public token** (`pk.*`) per Mapbox GL JS lato browser. Restrict URL: `localhost:*`, `*.vercel.app`, `*.moto-lollo.it`.
-2. **Secret token** (`sk.*`) per Edge Functions / RPC che chiamano Directions/Geocoding. Mai esposto client.
+**Solo 1 token serve** (lato client, public):
 
-Env vars:
 ```
-MAPBOX_PUBLIC_TOKEN=pk.eyJ1Ijoi...
-MAPBOX_SECRET_TOKEN=sk.eyJ1Ijoi...
-NEXT_PUBLIC_MAPBOX_TOKEN=$MAPBOX_PUBLIC_TOKEN  # esposto al client
+NEXT_PUBLIC_ORS_TOKEN=...  # da openrouteservice.org/dev/#/signup
 ```
 
-### Endpoints proxati via Edge Function
+Tile da OpenFreeMap **non richiedono token**. URL style: `https://tiles.openfreemap.org/styles/positron`.
+
+### Endpoints proxati via Edge Function (Fase 4+)
+
+Quando il backend Supabase è in piedi, le chiamate geocoding/directions passano dietro un proxy Edge Function. Vantaggi:
+1. Token ORS non esposto al client → più sicuro (anti-quota-theft)
+2. Rate-limit per `auth.uid()` → 1 user spam non esaurisce la quota condivisa
 
 ```ts
-// supabase/functions/mapbox-proxy/index.ts
+// supabase/functions/maps-proxy/index.ts
 import { serve } from "https://deno.land/std/http/server.ts"
 
 serve(async (req) => {
   const { endpoint, params } = await req.json()
-  const SECRET = Deno.env.get('MAPBOX_SECRET_TOKEN')!
+  const TOKEN = Deno.env.get('ORS_TOKEN')!
 
-  const url = (() => {
-    switch (endpoint) {
-      case 'directions':
-        return `https://api.mapbox.com/directions/v5/mapbox/driving/${params.coords}?access_token=${SECRET}&geometries=polyline&overview=full`
-      case 'geocoding':
-        return `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(params.query)}.json?access_token=${SECRET}&proximity=${params.proximity || ''}&limit=5`
-      case 'static-image':
-        return `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${params.overlay}/${params.center}/${params.zoom}/${params.size}@2x?access_token=${SECRET}`
-      default:
-        throw new Error(`Unknown endpoint: ${endpoint}`)
-    }
-  })()
+  // Rate-limit per auth.uid() via Supabase RPC
+  // ...
 
-  const res = await fetch(url)
+  const url = endpoint === 'directions'
+    ? `https://api.openrouteservice.org/v2/directions/${params.profile}`
+    : endpoint === 'geocoding'
+    ? `https://api.openrouteservice.org/geocode/search?api_key=${TOKEN}&text=${encodeURIComponent(params.query)}&size=5&boundary.country=IT`
+    : null
+
+  if (!url) return new Response('Unknown endpoint', { status: 400 })
+
+  const init = endpoint === 'directions'
+    ? {
+        method: 'POST',
+        headers: { Authorization: TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coordinates: params.coordinates, language: 'it', instructions: true })
+      }
+    : undefined
+
+  const res = await fetch(url, init)
   return new Response(await res.text(), {
     headers: { 'Content-Type': 'application/json' },
     status: res.status
@@ -573,12 +593,12 @@ serve(async (req) => {
 })
 ```
 
-### Rate limit
+### Rate limit (Fase 4+)
 
 Edge Function deve rate-limitare per `auth.uid()`:
 - 20 geocoding / min
-- 60 directions / day (Mapbox free tier 100k/mese)
-- 100 static-image / day
+- 60 directions / day (ORS free tier 2000/giorno → diviso per user)
+- 100 static-image / day (quando arriverà)
 
 ---
 
@@ -675,7 +695,7 @@ Per la "MVP IO solo" (vedi `docs/ROADMAP.md` Fase 1):
 1. **Setup infrastruttura**
    - Supabase project creato (free tier ok per test)
    - Vercel project linked a repo, env vars settate
-   - Mapbox token public + secret
+   - OpenRouteService API key (signup gratuito)
    - Domain custom (opzionale, Vercel subdomain ok per test)
 
 2. **Schema migration 001** (auth + profile + preferences)
@@ -702,11 +722,11 @@ Per la "MVP IO solo" (vedi `docs/ROADMAP.md` Fase 1):
    - RPC home_dashboard
    - Frontend: io.home wirato
 
-6. **Mapbox integration**
-   - Edge function mapbox-proxy
-   - Mapbox GL JS dentro pages
-   - Directions, geocoding, static images
-   - Frontend: navigation overlay, mini-mappe
+6. **Maps integration** (in larga parte già wirata in repo)
+   - MapLibre GL JS già attivo in `NavigationOverlay`
+   - Tile OpenFreeMap già configurate
+   - Geocoding + Directions OpenRouteService wirate (richiede `NEXT_PUBLIC_ORS_TOKEN` su Vercel)
+   - In Fase 4+: Edge Function `maps-proxy` per nascondere il token e rate-limitare per user
 
 7. **Drawer + Profile**
    - Frontend: 50_drawer screens (Profilo, Settings, Privacy come placeholder funzionante)
@@ -770,7 +790,7 @@ Da chiudere prima di Fase 1:
 1. **Username modificabile entro 7g?** (vecchia spec F-003) — decidere
 2. **Background sync su PWA**: cosa fare quando si perde connessione a metà uscita? Service worker queue verso Supabase quando torna online. Disegnare flow.
 3. **Wake Lock denied**: degrade UX. Banner + raccomandazione, ok per testers iniziali.
-4. **Mapbox monthly cap**: free tier 50k map loads + 100k geocoding. Sufficiente per 5-50 utenti. Soglia di allarme a 80% del cap (mail/notifica).
+4. **ORS daily cap**: free tier 1k geocoding + 2k directions / giorno. Per 4-5 testers ampiamente sufficiente. Soglia di allarme a 80% (vedere ORS dashboard / logs).
 5. **GDPR export format**: JSON dump completo (consigliato) o ZIP con CSV multipli + foto?
 6. **Email transactional provider**: Supabase SMTP default (rate limited) vs Resend ($20/m, deliverability migliore). Iniziamo con Supabase default e switch quando necessario.
 
