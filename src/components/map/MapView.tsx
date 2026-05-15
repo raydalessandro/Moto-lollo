@@ -308,7 +308,11 @@ function LiveMaplibreView({
 
   return (
     <div className={`relative h-full w-full ${className}`}>
-      <div ref={containerRef} className="absolute inset-0" />
+      {/* MapLibre forza .maplibregl-map { position: relative } sul container,
+          quindi 'absolute inset-0' viene sovrascritto e l'altezza collassa.
+          Uso h-full w-full che eredita size dal parent indipendentemente
+          dal position. */}
+      <div ref={containerRef} className="h-full w-full" />
       {!ready && fallback && (
         <div className="absolute inset-0">{fallback}</div>
       )}
