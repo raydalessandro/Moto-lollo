@@ -77,31 +77,42 @@ function LiveMapboxView({
     let cancelled = false;
     let map: unknown;
     (async () => {
-      const mod = await import("mapbox-gl");
-      await import("mapbox-gl/dist/mapbox-gl.css");
-      if (cancelled || !containerRef.current) return;
+      try {
+        const mod = await import("mapbox-gl");
+        if (cancelled || !containerRef.current) return;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mapboxgl = (mod as any).default ?? mod;
-      mapboxgl.accessToken = MAPBOX_TOKEN;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mapboxgl = (mod as any).default ?? mod;
 
-      map = new mapboxgl.Map({
-        container: containerRef.current,
-        style: MAPBOX_STYLE_DARK,
-        center: center ?? userLocation
-          ? [userLocation!.lon, userLocation!.lat]
-          : [10.0, 45.5],
-        zoom,
-        attributionControl: false,
-        pitchWithRotate: false,
-      });
-      mapRef.current = map;
+        const initialCenter: [number, number] =
+          center ?? (userLocation ? [userLocation.lon, userLocation.lat] : [10.0, 45.5]);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (map as any).on("load", () => {
-        if (cancelled) return;
-        setReady(true);
-      });
+        map = new mapboxgl.Map({
+          accessToken: MAPBOX_TOKEN,
+          container: containerRef.current,
+          style: MAPBOX_STYLE_DARK,
+          center: initialCenter,
+          zoom,
+          attributionControl: false,
+          pitchWithRotate: false,
+        });
+        mapRef.current = map;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const m = map as any;
+        m.on("error", (e: { error?: Error }) => {
+          console.error("[Mapbox] error:", e?.error?.message ?? e);
+        });
+        m.on("load", () => {
+          if (cancelled) return;
+          // Ensure the canvas matches the container size (PWA/standalone
+          // sometimes initializes before layout settles).
+          m.resize();
+          setReady(true);
+        });
+      } catch (err) {
+        console.error("[Mapbox] init failed:", err);
+      }
     })();
 
     return () => {
@@ -113,6 +124,16 @@ function LiveMapboxView({
       mapRef.current = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-resize when container size changes (PWA orientation, header relayout, ecc.).
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map = mapRef.current as any;
+    if (!ready || !map || !containerRef.current) return;
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [ready]);
 
   // Update user marker.
   useEffect(() => {
