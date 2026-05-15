@@ -164,3 +164,17 @@ input::placeholder {
 .screen-enter {
   animation: screenFadeIn 280ms ease-out both;
 }
+
+/* =========================================================================
+   MapLibre overrides — kill focus outline + ensure canvas fills container.
+   ========================================================================= */
+
+.maplibregl-canvas:focus,
+.maplibregl-canvas:focus-visible {
+  outline: none;
+}
+
+.maplibregl-map {
+  font-family: inherit;
+}
+
