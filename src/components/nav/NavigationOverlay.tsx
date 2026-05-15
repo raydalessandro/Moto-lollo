@@ -11,12 +11,15 @@ import {
   geocode,
   getDirections,
   type DirectionsRoute,
+  type GeocodeResult,
 } from "@/lib/maps";
 
 export type NavMode =
   | { kind: "tracking"; title?: string }
-  | { kind: "navigation"; destination: string }
+  | { kind: "navigation" }
   | { kind: "cordata"; rideTitle: string; groupName: string; accent: string };
+
+type NavPhase = "search" | "preview" | "navigating";
 
 interface NavigationOverlayProps {
   mode: NavMode;
@@ -40,29 +43,42 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
   const [points, setPoints] = useState<Array<{ lat: number; lon: number; t: number }>>(
     [],
   );
-  const [destinationCoord, setDestinationCoord] = useState<[number, number] | null>(
-    null,
-  );
   const [route, setRoute] = useState<DirectionsRoute | null>(null);
+
+  // Navigation flow state (search → preview → navigating).
+  const [navPhase, setNavPhase] = useState<NavPhase>(
+    mode.kind === "navigation" ? "search" : "navigating",
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<GeocodeResult[]>([]);
+  const [searchStatus, setSearchStatus] = useState<"idle" | "loading" | "error">(
+    "idle",
+  );
+  const [chosenDestination, setChosenDestination] = useState<{
+    center: [number, number];
+    placeName: string;
+  } | null>(null);
+  const [routeStatus, setRouteStatus] = useState<"idle" | "loading" | "error">("idle");
 
   const routingOn = hasRoutingApi();
 
-  // Wake lock: attivo quando overlay è aperto e non in pausa.
-  useWakeLock(!paused);
+  // Wake lock: attivo quando overlay è aperto e in navigazione (non in search/preview).
+  useWakeLock(!paused && navPhase === "navigating");
 
-  // GPS: attivo quando overlay aperto e non in pausa.
+  // GPS: sempre attivo finché overlay aperto e non in pausa (anche in search
+  // per centrare la mappa di anteprima e per fare proximity-aware geocoding).
   const geo = useGeolocation(!paused);
 
-  // Time tick (always running unless paused).
+  // Time tick: solo durante navigazione attiva.
   useEffect(() => {
-    if (paused) return;
+    if (paused || navPhase !== "navigating") return;
     const id = setInterval(() => setElapsedSec((s) => s + 1), 1000);
     return () => clearInterval(id);
-  }, [paused]);
+  }, [paused, navPhase]);
 
-  // Append GPS points (with accuracy + min-distance filter).
+  // Append GPS points solo durante navigazione attiva (no traccia in search/preview).
   useEffect(() => {
-    if (!geo.position) return;
+    if (!geo.position || navPhase !== "navigating") return;
     const p = geo.position;
     if (p.accuracy > 30) return; // skip noisy fix (was 50, too loose)
     setPoints((prev) => {
@@ -72,37 +88,74 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
       if (last && haversineMeters(last, { lat: p.lat, lon: p.lon }) < 10) return prev;
       return [...prev, { lat: p.lat, lon: p.lon, t: p.t }];
     });
-  }, [geo.position]);
+  }, [geo.position, navPhase]);
 
-  // Geocode + directions for "navigation" mode at first GPS fix.
+  // Debounced geocoding while typing in search.
   useEffect(() => {
-    if (mode.kind !== "navigation" || !routingOn) return;
+    if (mode.kind !== "navigation" || navPhase !== "search") return;
+    const q = searchQuery.trim();
+    if (q.length < 3) {
+      setSearchResults([]);
+      setSearchStatus("idle");
+      return;
+    }
+    if (!routingOn) {
+      setSearchStatus("error");
+      return;
+    }
     let cancelled = false;
-    (async () => {
+    setSearchStatus("loading");
+    const t = setTimeout(async () => {
       try {
         const proximity: [number, number] | undefined = geo.position
           ? [geo.position.lon, geo.position.lat]
           : undefined;
-        const results = await geocode(mode.destination, { proximity, limit: 1 });
-        if (cancelled || results.length === 0) return;
-        const dest = results[0].center;
-        setDestinationCoord(dest);
+        const r = await geocode(q, { proximity, limit: 5 });
+        if (cancelled) return;
+        setSearchResults(r);
+        setSearchStatus(r.length === 0 ? "error" : "idle");
+      } catch (e) {
+        if (cancelled) return;
+        console.warn("Geocode failed:", e);
+        setSearchStatus("error");
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [searchQuery, navPhase, mode.kind, routingOn, geo.position?.lat, geo.position?.lon]); // eslint-disable-line react-hooks/exhaustive-deps
 
-        if (geo.position) {
-          const r = await getDirections({
-            origin: [geo.position.lon, geo.position.lat],
-            destination: dest,
-          });
-          if (!cancelled && r) setRoute(r);
+  // Fetch directions when a destination is chosen → enter preview.
+  useEffect(() => {
+    if (!chosenDestination || !routingOn) return;
+    if (!geo.position) return; // wait for first GPS fix
+    let cancelled = false;
+    setRouteStatus("loading");
+    (async () => {
+      try {
+        const r = await getDirections({
+          origin: [geo.position!.lon, geo.position!.lat],
+          destination: chosenDestination.center,
+        });
+        if (cancelled) return;
+        if (r) {
+          setRoute(r);
+          setRouteStatus("idle");
+          setNavPhase("preview");
+        } else {
+          setRouteStatus("error");
         }
       } catch (e) {
-        console.warn("Geocode/Directions failed:", e);
+        if (cancelled) return;
+        console.warn("Directions failed:", e);
+        setRouteStatus("error");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [mode, routingOn, geo.position?.lat, geo.position?.lon]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chosenDestination, routingOn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derived stats from real GPS points.
   const distanceKm = useMemo(() => {
@@ -137,19 +190,37 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
     mode.kind === "tracking"
       ? mode.title ?? "Registrazione GPS"
       : mode.kind === "navigation"
-        ? `Verso ${mode.destination}`
+        ? navPhase === "search"
+          ? "Dove vuoi andare?"
+          : chosenDestination?.placeName ?? "Naviga"
         : `Cordata · ${mode.groupName}`;
 
   const subtitle =
     mode.kind === "tracking"
       ? "Traccia in corso"
       : mode.kind === "navigation"
-        ? "Turn-by-turn"
+        ? navPhase === "search"
+          ? "Cerca una destinazione"
+          : navPhase === "preview"
+            ? "Pronto a partire"
+            : "Turn-by-turn"
         : mode.rideTitle;
 
   // Next maneuver: prima istruzione del route. TODO: avanzare lo step
   // man mano che la posizione si avvicina al successivo punto-svolta.
-  const nextStep = mode.kind === "navigation" ? route?.steps[0] : undefined;
+  const nextStep =
+    mode.kind === "navigation" && navPhase === "navigating"
+      ? route?.steps[0]
+      : undefined;
+
+  const phaseLabel =
+    mode.kind === "navigation"
+      ? navPhase === "search"
+        ? "NAVIGA"
+        : navPhase === "preview"
+          ? "PREVIEW"
+          : "NAVIGA"
+      : mode.kind.toUpperCase();
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-bg">
@@ -176,7 +247,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
               className="font-mono text-[9px] uppercase tracking-[0.3em]"
               style={{ color: accent }}
             >
-              {mode.kind.toUpperCase()}
+              {phaseLabel}
               {geo.status === "watching" && " · GPS"}
               {geo.status === "denied" && " · GPS denied"}
               {geo.status === "requesting" && " · GPS…"}
@@ -187,6 +258,20 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
         <span className="w-9" />
       </header>
 
+      {mode.kind === "navigation" && navPhase === "search" ? (
+        <DestinationSearchPanel
+          query={searchQuery}
+          onQueryChange={setSearchQuery}
+          results={searchResults}
+          status={searchStatus}
+          routingOn={routingOn}
+          routeStatus={routeStatus}
+          onPick={(r) =>
+            setChosenDestination({ center: r.center, placeName: r.placeName })
+          }
+        />
+      ) : (
+        <>
       {/* Map area (Mapbox real or SVG fallback) */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <MapView
@@ -201,7 +286,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
           }
           routePolyline={route?.polyline}
           livePolyline={livePolyline || undefined}
-          destination={destinationCoord ?? undefined}
+          destination={chosenDestination?.center ?? undefined}
           fallback={<MapBackdropFallback accent={accent} mode={mode} />}
         >
           <NextManeuverBanner step={nextStep} accent={accent} />
@@ -214,7 +299,24 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
         </MapView>
       </div>
 
-      {/* HUD */}
+      {mode.kind === "navigation" && navPhase === "preview" && route ? (
+        <RoutePreviewCard
+          route={route}
+          placeName={chosenDestination?.placeName ?? ""}
+          accent={accent}
+          onStart={() => {
+            setElapsedSec(0);
+            setPoints([]);
+            setNavPhase("navigating");
+          }}
+          onChange={() => {
+            setRoute(null);
+            setChosenDestination(null);
+            setNavPhase("search");
+          }}
+        />
+      ) : (
+      /* HUD */
       <div className="shrink-0 border-t border-line bg-bg">
         <div className="grid grid-cols-3 border-b border-line">
           {[
@@ -289,6 +391,9 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
           </button>
         </div>
       </div>
+      )}
+        </>
+      )}
     </div>
   );
 }
@@ -399,6 +504,196 @@ function SpeedBubble({ speed, accent }: { speed: number; accent: string }) {
       <span className="font-mono text-[8px] uppercase tracking-widest text-ink-dim">
         km/h
       </span>
+    </div>
+  );
+}
+
+// ─── Destination search panel (navPhase === "search") ──────────────────────
+
+function DestinationSearchPanel({
+  query,
+  onQueryChange,
+  results,
+  status,
+  routingOn,
+  routeStatus,
+  onPick,
+}: {
+  query: string;
+  onQueryChange: (v: string) => void;
+  results: GeocodeResult[];
+  status: "idle" | "loading" | "error";
+  routingOn: boolean;
+  routeStatus: "idle" | "loading" | "error";
+  onPick: (r: GeocodeResult) => void;
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col bg-bg">
+      <div className="border-b border-line p-4">
+        <label className="block">
+          <span className="mb-2 block font-mono text-[9px] uppercase tracking-widest text-ink-dim">
+            Cerca destinazione
+          </span>
+          <div className="flex items-center gap-2 rounded-xl border border-line bg-panel px-3 py-2">
+            <Icon d="M21 21l-6-6 M4 11a7 7 0 1 0 14 0 7 7 0 0 0-14 0" size={16} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              placeholder="Es: Passo del Tonale, Lago di Garda…"
+              className="flex-1 bg-transparent font-mono text-sm placeholder:text-ink-mute focus:outline-none"
+              autoFocus
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => onQueryChange("")}
+                className="text-ink-dim hover:text-ink"
+                aria-label="Pulisci"
+              >
+                <Icon d="M18 6L6 18 M6 6l12 12" size={12} />
+              </button>
+            )}
+          </div>
+        </label>
+        {!routingOn && (
+          <p className="mt-2 font-mono text-[10px] text-danger">
+            Token OpenRouteService mancante — geocoding disabilitato.
+          </p>
+        )}
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {routeStatus === "loading" && (
+          <div className="flex items-center justify-center gap-2 p-6 font-mono text-[11px] text-ember">
+            <span className="live-pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-ember" />
+            Calcolo percorso…
+          </div>
+        )}
+        {routeStatus === "error" && (
+          <div className="m-4 rounded-xl border border-danger/40 bg-bg p-3 font-mono text-[11px] text-danger">
+            Errore nel calcolo del percorso. Riprova.
+          </div>
+        )}
+        {routeStatus === "idle" && status === "loading" && (
+          <div className="p-4 font-mono text-[11px] text-ink-dim">Cerco…</div>
+        )}
+        {routeStatus === "idle" && status === "error" && query.trim().length >= 3 && (
+          <div className="p-4 font-mono text-[11px] text-ink-dim">
+            Nessun risultato per &ldquo;{query}&rdquo;.
+          </div>
+        )}
+        {routeStatus === "idle" && status === "idle" && results.length === 0 && (
+          <div className="p-4 font-mono text-[10px] leading-relaxed text-ink-dim">
+            Digita almeno 3 caratteri. Cerca paesi, passi, indirizzi, POI.
+          </div>
+        )}
+        {routeStatus === "idle" &&
+          results.map((r, i) => (
+            <button
+              key={`${r.placeName}-${i}`}
+              type="button"
+              onClick={() => onPick(r)}
+              className="flex w-full items-start gap-3 border-b border-line-soft px-4 py-3 text-left transition-colors hover:bg-panel"
+            >
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-panel text-ember">
+                <Icon d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z M12 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" size={14} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-display text-sm font-medium">
+                  {r.placeName}
+                </div>
+                <div className="mt-0.5 font-mono text-[9px] text-ink-dim">
+                  {r.center[1].toFixed(4)}, {r.center[0].toFixed(4)}
+                </div>
+              </div>
+            </button>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Route preview card (navPhase === "preview") ────────────────────────────
+
+function RoutePreviewCard({
+  route,
+  placeName,
+  accent,
+  onStart,
+  onChange,
+}: {
+  route: DirectionsRoute;
+  placeName: string;
+  accent: string;
+  onStart: () => void;
+  onChange: () => void;
+}) {
+  const km = (route.distanceM / 1000).toFixed(1);
+  const min = Math.round(route.durationS / 60);
+  const h = Math.floor(min / 60);
+  const mm = min % 60;
+  const durationLabel = h > 0 ? `${h}h ${mm}min` : `${min}min`;
+
+  return (
+    <div className="shrink-0 border-t border-line bg-bg">
+      <div className="px-4 py-3">
+        <div className="font-mono text-[9px] uppercase tracking-widest text-ink-dim">
+          Verso
+        </div>
+        <div className="truncate font-display text-base font-semibold">
+          {placeName}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 border-y border-line">
+        <div className="px-4 py-3">
+          <div className="font-mono text-[9px] uppercase tracking-widest text-ink-dim">
+            distanza
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span
+              className="font-display text-2xl font-medium tabular-nums leading-none"
+              style={{ color: accent }}
+            >
+              {km}
+            </span>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-ink-dim">
+              km
+            </span>
+          </div>
+        </div>
+        <div className="border-l border-line px-4 py-3">
+          <div className="font-mono text-[9px] uppercase tracking-widest text-ink-dim">
+            durata stimata
+          </div>
+          <div className="font-display text-2xl font-medium tabular-nums leading-none">
+            {durationLabel}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-3 px-4 py-3">
+        <button
+          type="button"
+          onClick={onChange}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-line bg-panel px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-ink-soft transition-colors hover:border-line-soft"
+        >
+          <Icon d="M21 21l-6-6 M4 11a7 7 0 1 0 14 0 7 7 0 0 0-14 0" size={14} />
+          Cambia
+        </button>
+        <button
+          type="button"
+          onClick={onStart}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 font-mono text-[11px] uppercase tracking-wider"
+          style={{
+            borderColor: accent,
+            background: `${accent}14`,
+            color: accent,
+          }}
+        >
+          <Icon d="M6 3l14 9-14 9z" size={14} />
+          Avvia
+        </button>
+      </div>
     </div>
   );
 }

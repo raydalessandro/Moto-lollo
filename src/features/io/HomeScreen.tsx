@@ -185,12 +185,7 @@ export function HomeScreen({ onNavigate, onStartNavigation }: HomeScreenProps = 
             label="Naviga"
             sub="a destinazione"
             iconPath="M3 11l19-9-9 19-2-8z"
-            onClick={() =>
-              onStartNavigation?.({
-                kind: "navigation",
-                destination: "Passo del Tonale",
-              })
-            }
+            onClick={() => onStartNavigation?.({ kind: "navigation" })}
           />
           <QuickAction
             label="Carica"
