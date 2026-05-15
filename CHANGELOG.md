@@ -9,6 +9,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Versioning [Se
 ## [Unreleased]
 
 ### Aggiunto
+- **NavigationOverlay — Fase A turn-by-turn**: navigazione con search destinazione, geocoding debounced (300ms, proximity-aware), preview route con km/durata, bottoni Avvia/Cambia. Lo state machine `search → preview → navigating` sostituisce il vecchio prop `destination: string` (NavMode `navigation` ora senza payload). Le Fasi B/C/D (step progression, voce, reroute, arrivo) restano da fare.
+
+### Issue noti da sistemare
+- **Geocoding ORS — indirizzi italiani**: il backend Pelias di OpenRouteService non trova certi indirizzi specifici (es: "Via XXV Aprile, Cesano Boscone" — sia "XXV" che "25" falliscono). Da indagare: provider alternativo per il geocoding (Nominatim OSM, Photon), oppure pre-processing dei numeri romani lato client, oppure fallback su seconda API quando ORS non trova nulla.
+
+### Aggiunto
 - **Stack mappe open-source completa** (in sostituzione di Mapbox dopo problemi inspiegabili lato account):
   - Dipendenza `maplibre-gl` (al posto di `mapbox-gl` + types)
   - Tile rendering: [MapLibre GL JS](https://maplibre.org/) + [OpenFreeMap](https://openfreemap.org/) — zero signup, tile illimitate
