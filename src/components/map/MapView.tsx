@@ -50,6 +50,13 @@ function LiveMaplibreView({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<unknown>(null);
   const [ready, setReady] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+
+  const addLog = (msg: string) => {
+    const t = new Date().toISOString().slice(14, 19);
+    console.log("[MapView]", msg);
+    setDebugLogs((l) => [...l.slice(-9), `${t} ${msg}`]);
+  };
 
   // Initialize map (one-shot).
   useEffect(() => {
@@ -57,16 +64,21 @@ function LiveMaplibreView({
     let map: unknown;
     (async () => {
       try {
+        addLog("import maplibre-gl…");
         const mod = await import("maplibre-gl");
         if (cancelled || !containerRef.current) return;
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const maplibregl = (mod as any).default ?? mod;
+        addLog(`module v${maplibregl.version ?? "?"}`);
+
+        const rect0 = containerRef.current.getBoundingClientRect();
+        addLog(
+          `container ${rect0.width.toFixed(0)}x${rect0.height.toFixed(0)} px`,
+        );
 
         const initialCenter: [number, number] =
           center ?? (userLocation ? [userLocation.lon, userLocation.lat] : [10.0, 45.5]);
-
-        console.log("[MapView] init with style:", MAP_STYLE_URL);
 
         map = new maplibregl.Map({
           container: containerRef.current,
@@ -77,25 +89,31 @@ function LiveMaplibreView({
           pitchWithRotate: false,
         });
         mapRef.current = map;
+        addLog("map created");
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const m = map as any;
         m.on("error", (e: { error?: Error }) => {
-          console.error("[MapView] error:", e?.error?.message ?? e);
+          addLog(`ERROR: ${e?.error?.message ?? JSON.stringify(e)}`);
         });
-        m.on("styledata", () => console.log("[MapView] styledata"));
+        m.on("styledata", () => addLog("styledata"));
         m.on("load", () => {
           if (cancelled) return;
           const rect = containerRef.current?.getBoundingClientRect();
-          console.log(
-            `[MapView] load OK · container ${rect?.width.toFixed(0)}x${rect?.height.toFixed(0)} px`,
+          addLog(
+            `LOAD ✓ ${rect?.width.toFixed(0)}x${rect?.height.toFixed(0)}`,
           );
           m.resize();
           setReady(true);
         });
-        m.on("idle", () => console.log("[MapView] idle (tiles loaded ✓)"));
+        m.on("idle", () => addLog("idle (tiles ✓)"));
+        m.on("data", (e: { dataType?: string; tile?: unknown }) => {
+          if (e.dataType === "source" && e.tile) {
+            // count tiles silently
+          }
+        });
       } catch (err) {
-        console.error("[MapView] init failed:", err);
+        addLog(`CATCH: ${err instanceof Error ? err.message : String(err)}`);
       }
     })();
 
@@ -295,6 +313,21 @@ function LiveMaplibreView({
         <div className="absolute inset-0">{fallback}</div>
       )}
       {children}
+
+      {/* Debug HUD on-screen — togliere quando la mappa funziona */}
+      <div
+        className="pointer-events-none absolute left-2 top-2 max-w-[70vw] rounded-md bg-black/70 px-2 py-1 font-mono text-[9px] leading-tight text-white"
+        style={{ zIndex: 100 }}
+      >
+        <div style={{ color: ready ? "#7da35f" : "#ff6a1f" }}>
+          [Map] ready={String(ready)}
+        </div>
+        {debugLogs.map((l, i) => (
+          <div key={i} style={{ opacity: 0.85 }}>
+            {l}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
