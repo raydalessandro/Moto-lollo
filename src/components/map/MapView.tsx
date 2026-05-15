@@ -86,10 +86,14 @@ function LiveMaplibreView({
         m.on("styledata", () => console.log("[MapView] styledata"));
         m.on("load", () => {
           if (cancelled) return;
-          console.log("[MapView] load OK");
+          const rect = containerRef.current?.getBoundingClientRect();
+          console.log(
+            `[MapView] load OK · container ${rect?.width.toFixed(0)}x${rect?.height.toFixed(0)} px`,
+          );
           m.resize();
           setReady(true);
         });
+        m.on("idle", () => console.log("[MapView] idle (tiles loaded ✓)"));
       } catch (err) {
         console.error("[MapView] init failed:", err);
       }
