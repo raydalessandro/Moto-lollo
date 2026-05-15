@@ -1,6 +1,5 @@
 "use client";
 
-import "maplibre-gl/dist/maplibre-gl.css"; 
 import { useEffect, useRef, useState } from "react";
 import { MAP_STYLE_URL, decodePolyline } from "@/lib/maps";
 
