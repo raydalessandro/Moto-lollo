@@ -407,35 +407,54 @@ in-corso → completata (al fine partita, manuale o auto-timeout)
 
 ---
 
-## 18 · PublishedRoute
+## 18 · PublishedRoute (feed item)
 
-Un percorso condiviso. Può derivare da `Activity` (l'utente pubblica la sua uscita) o da `PlannedRoute` (l'utente pubblica un percorso progettato).
+L'entità che vive nel Feed. **Polimorfica** via discriminator `kind`:
+
+- `kind: "route"` → presentazione di un percorso (deriva da `Activity` o `PlannedRoute`). Entra in **Classifica**.
+- `kind: "post"` → post social: testo + foto, eventualmente con un percorso allegato via `sourceType+sourceId`. **NON** entra in Classifica.
 
 ```ts
 {
   id: UUID;
-  sourceType: "activity" | "planned_route";
-  sourceId: UUID;          // riferimento all'entità source
+  kind: "route" | "post";
+  // Required quando kind="route". Optional per "post" (post puro o con route allegato).
+  sourceType?: "activity" | "planned_route";
+  sourceId?: UUID;
   ownerId: UUID;
-  title: string;
-  coverText?: string;      // testo evocativo per card feed
+  title: string;          // titolo del percorso, o subject del post
+  coverText?: string;     // testo evocativo (kind="route")
+  body?: string;          // testo del post (kind="post")
+  media: FeedMedia[];     // foto allegate (kind="post"; empty per "route")
   heroColor?: string;
   distanceKm: number;
   durationMin?: number;
   area?: string;
   tags: string[];
   publishedAt: ISODate;
-  scope: "public" | "group";  // chi può vederlo
+  scope: "public" | "group";
   publishedToGroupId?: UUID;  // required se scope === "group"
-  alsoForCars: boolean;       // flag filtro Feed
-  savedCount: number;         // denormalized: count SavedRoute
-  navigatedCount: number;     // denormalized: count "Naviga" su questo route
+  alsoForCars: boolean;       // flag filtro Feed (relevant solo kind="route")
+  savedCount: number;         // denormalized: count SavedRoute (relevant solo "route")
+  navigatedCount: number;     // denormalized: count "Naviga" (relevant solo "route")
+}
+
+interface FeedMedia {
+  url: string;            // Supabase Storage URL
+  caption?: string;
 }
 ```
 
-**Filtro veicolo:** Feed con `onlyCars: true` → `WHERE alsoForCars = true`.
+**Filtro Feed `onlyCars`:** mostra solo `kind="route" AND alsoForCars=true`.
+
+**Filtro Classifica:** solo `kind="route"` (i post non hanno saves/navigated significativi).
 
 **Promote group → public:** admin di gruppo può cambiare `scope` da `"group"` a `"public"`. Solo l'admin del gruppo che lo possiede.
+
+**Note:**
+- I post non vanno in `io.mappa` (archivio percorsi miei). Un post pubblicato vive solo nel Feed.
+- Un post **con** route allegato (sourceType+sourceId presenti) mostra una chip "🔗 Percorso linked" che porta al detail/naviga.
+- Comments e Likes funzionano identici per route e post (stessa tabella `route_comments`, `route_likes`).
 
 ---
 

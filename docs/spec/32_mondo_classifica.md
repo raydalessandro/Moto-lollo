@@ -4,7 +4,9 @@
 
 ## Purpose
 
-Classifica dei **percorsi** della community (non degli utenti, non dei segmenti). Ranking computato da counters denormalizzati su `PublishedRoute`:
+Classifica dei **percorsi** della community (non degli utenti, non dei segmenti, **non dei post**). La classifica considera solo `PublishedRoute` con `kind="route"` — i post social (con o senza percorso allegato) sono esclusi perché non hanno metriche di saves/navigated significative.
+
+Ranking computato da counters denormalizzati su `PublishedRoute`:
 - `navigatedCount` (quante volte è stato avviato come Naviga)
 - `savedCount` (quante volte è stato salvato)
 - `likesCount` (derivato da `RouteLike`)

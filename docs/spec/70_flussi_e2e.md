@@ -35,6 +35,7 @@ Convenzione: i nomi delle mutations sono "logici", il back è libero di mapparli
 | F-19 | Apro classifica percorsi | MONDO | S |
 | F-20 | Apro inbox notifiche | drawer/header | S |
 | F-21 | Logout / cancello account | drawer | M |
+| F-22 | Pubblico un post (testo + foto, opzionale link percorso) | IO → MONDO | S |
 
 ---
 
@@ -409,6 +410,43 @@ Convenzione: i nomi delle mutations sono "logici", il back è libero di mapparli
 **Mutations:**
 - `markNotificationRead(notificationId, userId)`
 - `markAllNotificationsRead(userId)`
+
+---
+
+## F-22 · Pubblico un post (testo + foto, opzionale link percorso)
+
+**Passi UI:** `io.feed` → "+ Nuovo post" → editor (title opzionale, body, upload foto, optional "Allega percorso" → picker tra miei PublishedRoute "route" / Activity / PlannedRoute) → submit.
+
+**Mutations:**
+
+```ts
+publishPost({
+  ownerId,
+  title?,
+  body,
+  mediaFiles: File[],  // upload to storage prima
+  tags,
+  scope: "public" | "group",
+  publishedToGroupId?,
+  linkedSourceType?: "activity" | "planned_route",
+  linkedSourceId?: UUID,
+}) → PublishedRoute (kind="post")
+```
+
+**Side effects:**
+- Upload foto in Supabase Storage `activity-media/{userId}/{postId}/{filename}`
+- Notification ai follower (kind: `"comment"` riusato — body "X ha pubblicato")
+- Se linkedSourceId → fetch distanceKm/durationMin/area dal source per copiarli nel record post (così la card può mostrare il chip "percorso linked" senza altra query)
+
+**Validation:**
+- body 1-2000 chars
+- mediaFiles max 6, ognuna ≤ 10MB, image/jpeg|png|webp
+- linkedSourceId.ownerId = current user (puoi linkare solo i tuoi)
+
+**HUMAN-DEFERRED:**
+- Edit di un post pubblicato (entro X minuti)?
+- Re-share di un post altrui?
+- Mentions con @username?
 
 ---
 

@@ -256,6 +256,21 @@ export interface GroupRideRSVP {
 export type PublishedRouteSource = "activity" | "planned_route";
 
 /**
+ * Discriminates a feed item.
+ *  - "route" → presentazione di un percorso (Activity / PlannedRoute). Va in Classifica.
+ *  - "post"  → post in stile social (testo + foto), eventualmente con un percorso allegato
+ *              via sourceType+sourceId. NON va in Classifica.
+ */
+export type FeedItemKind = "route" | "post";
+
+export interface FeedMedia {
+  /** Storage URL (Supabase Storage). In prototipo: una stringa placeholder usata per generare
+   *  un blocco colorato deterministico. */
+  url: string;
+  caption?: string;
+}
+
+/**
  * Visibility scope of a published route.
  *  - "public" → visible across the whole MONDO feed.
  *  - "group"  → visible only inside the publishing group's feed.
@@ -265,11 +280,18 @@ export type PublishedRouteScope = "public" | "group";
 
 export interface PublishedRoute {
   id: UUID;
-  sourceType: PublishedRouteSource;
-  sourceId: UUID;
+  /** Discriminates: "route" classifica-able, "post" social-only. */
+  kind: FeedItemKind;
+  /** Required when kind="route". Optional when kind="post" (post with attached route). */
+  sourceType?: PublishedRouteSource;
+  sourceId?: UUID;
   ownerId: UUID;
   title: string;
   coverText?: string;
+  /** Body of the post (long text). Used when kind="post". */
+  body?: string;
+  /** Photo attachments. Empty for kind="route" usually. */
+  media: FeedMedia[];
   heroColor?: string;
   distanceKm: number;
   durationMin?: number;

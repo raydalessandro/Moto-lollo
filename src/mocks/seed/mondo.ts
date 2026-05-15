@@ -39,6 +39,75 @@ const PUBS: PubSeed[] = [
   { id: "pub10",sourceType: "planned_route", sourceId: "pr6",      ownerId: "u0",        title: "Tour passi bergamaschi",       coverText: "Sette passi in un pomeriggio.",           heroColor: "#ff6a1f", distanceKm: 185, durationMin: 290, area: "Bergamo",      tags: ["alpi","tour"],     daysAgo: 85 },
 ];
 
+// ── Pure post / post-with-route attached ───────────────────────────────────
+
+interface PostSeed {
+  id: UUID;
+  ownerId: UUID;
+  title: string;
+  body: string;
+  /** Optional linked PublishedRoute (other "pub" id). When present, the card
+   *  becomes "post with route attached". */
+  linkedPubId?: UUID;
+  /** Placeholder media URLs (in prototipo: stringa che genera gradient). */
+  media: Array<{ url: string; caption?: string }>;
+  area?: string;
+  tags: string[];
+  daysAgo: number;
+  heroColor?: string;
+}
+
+const POSTS: PostSeed[] = [
+  {
+    id: "post1",
+    ownerId: "u0",
+    title: "Vento perfetto domenica",
+    body: "Sveglia alle 5:30, asfalto asciutto fino al Tonale. Una di quelle mattine in cui la moto sembra leggera. Riprendo a mettere in calendario sunrise più spesso.",
+    media: [{ url: "ph:sunset-pass:#ff6a1f" }, { url: "ph:winding-road:#d95a1a" }],
+    area: "Val Camonica",
+    tags: ["sunrise", "weekend"],
+    daysAgo: 1,
+    heroColor: "#ff6a1f",
+  },
+  {
+    id: "post2",
+    ownerId: "u_marco",
+    title: "Il loop del sabato",
+    body: "Questo è il giro che faccio quasi ogni sabato. 215 km, 5 ore, niente autostrada. Per chi è in Garda e vuole curve pulite, è il riferimento.",
+    linkedPubId: "pub9", // Stelvio loop classico
+    media: [{ url: "ph:mountain-curve:#d13a3a" }],
+    area: "Valtellina",
+    tags: ["consigliato", "weekend"],
+    daysAgo: 3,
+    heroColor: "#d13a3a",
+  },
+  {
+    id: "post3",
+    ownerId: "u_anna",
+    title: "Trattamento di lusso al Gavia",
+    body: "5°C e neve laterale a fine maggio. Casco bagnato fino a Bormio. Ne è valsa la pena per la luce su Santa Caterina.",
+    media: [
+      { url: "ph:snow-pass:#6bb0ff" },
+      { url: "ph:foggy-road:#8ab" },
+      { url: "ph:bike-snow:#aac" },
+    ],
+    area: "Valtellina",
+    tags: ["passi", "spring"],
+    daysAgo: 5,
+    heroColor: "#6bb0ff",
+  },
+  {
+    id: "post4",
+    ownerId: "u_luca",
+    title: "Voi cosa portate per 3 giorni?",
+    body: "Domanda al gruppo: borsone laterale + zaino sembra troppo. Bauletto + zaino mi sa scomodo. Configurazioni che usate?",
+    media: [],
+    area: "Generale",
+    tags: ["domanda", "viaggio"],
+    daysAgo: 6,
+  },
+];
+
 export function seedPublishedRoutes(): Record<UUID, PublishedRoute> {
   const out: Record<UUID, PublishedRoute> = {};
   for (const p of PUBS) {
@@ -50,12 +119,14 @@ export function seedPublishedRoutes(): Record<UUID, PublishedRoute> {
     const alsoForCars = idx % 3 === 0;
     out[p.id] = {
       id: p.id,
+      kind: "route",
       sourceType: p.sourceType,
       sourceId: p.sourceId,
       ownerId: p.ownerId,
       title: p.title,
       coverText: p.coverText,
       heroColor: p.heroColor,
+      media: [],
       distanceKm: p.distanceKm,
       durationMin: p.durationMin,
       area: p.area,
@@ -65,6 +136,30 @@ export function seedPublishedRoutes(): Record<UUID, PublishedRoute> {
       alsoForCars,
       savedCount,
       navigatedCount,
+    };
+  }
+  // Post (con o senza percorso linked)
+  for (const p of POSTS) {
+    const linked = p.linkedPubId ? out[p.linkedPubId] : undefined;
+    out[p.id] = {
+      id: p.id,
+      kind: "post",
+      sourceType: linked?.sourceType,
+      sourceId: linked?.sourceId,
+      ownerId: p.ownerId,
+      title: p.title,
+      body: p.body,
+      heroColor: p.heroColor,
+      media: p.media,
+      distanceKm: linked?.distanceKm ?? 0,
+      durationMin: linked?.durationMin,
+      area: p.area,
+      tags: p.tags,
+      publishedAt: addDays(NOW, -p.daysAgo),
+      scope: "public",
+      alsoForCars: false,
+      savedCount: 0,
+      navigatedCount: 0,
     };
   }
   return out;
@@ -89,6 +184,12 @@ const COMMENTS: CommentSeed[] = [
   { id: "c8", publishedRouteId: "pub5", authorId: "u0",       text: "Grazie Marco, cordata top.",                     hoursAgo: 12 },
   { id: "c9", publishedRouteId: "pub7", authorId: "u0",       text: "La prossima mi iscrivo.",                        hoursAgo: 22 },
   { id: "c10",publishedRouteId: "pub9", authorId: "u_fede",   text: "Me lo salvo per giugno.",                         hoursAgo: 50 },
+  // Commenti sui post
+  { id: "c11",publishedRouteId: "post1", authorId: "u_marco",  text: "Spettacolo. Quale strada hai preso da Edolo?",   hoursAgo: 18 },
+  { id: "c12",publishedRouteId: "post2", authorId: "u0",       text: "Provato il loop la settimana scorsa, top.",      hoursAgo: 60 },
+  { id: "c13",publishedRouteId: "post3", authorId: "u_davide", text: "Stessa cosa nei Tre Cime, neve a fine maggio.",  hoursAgo: 100 },
+  { id: "c14",publishedRouteId: "post4", authorId: "u_paolo",  text: "Borsone + tank bag piccolo. Zero zaino.",        hoursAgo: 130 },
+  { id: "c15",publishedRouteId: "post4", authorId: "u_dani",   text: "Concordo, lo zaino sulle distanze fa male.",     hoursAgo: 126 },
 ];
 
 export function seedRouteComments(): Record<UUID, RouteComment> {
@@ -112,6 +213,20 @@ export function seedRouteLikes(): Record<UUID, RouteLike> {
   let i = 0;
   for (const p of PUBS) {
     const count = 3 + rng.int(0, 9);
+    const likers = rng.sample(allUsers.filter((u) => u !== p.ownerId), count);
+    for (const u of likers) {
+      i += 1;
+      out[`lk${i}`] = {
+        id: `lk${i}`,
+        publishedRouteId: p.id,
+        userId: u,
+        createdAt: addDays(NOW, -p.daysAgo + rng.int(0, Math.max(1, p.daysAgo))),
+      };
+    }
+  }
+  // Likes anche sui post seed (stessa logica del loop su PUBS)
+  for (const p of POSTS) {
+    const count = 2 + rng.int(0, 8);
     const likers = rng.sample(allUsers.filter((u) => u !== p.ownerId), count);
     for (const u of likers) {
       i += 1;

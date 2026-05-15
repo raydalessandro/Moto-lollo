@@ -23,7 +23,10 @@ const SORTS: Array<{ key: SortKey; label: string }> = [
 ];
 
 export function ClassificaScreen() {
-  const routes = useQuery((db) => listPublishedRoutes(db));
+  // Solo "route" — i post non hanno counters di saves/navigated.
+  const routes = useQuery((db) =>
+    listPublishedRoutes(db).filter((r) => r.kind === "route"),
+  );
   const [sort, setSort] = useState<SortKey>("navigated");
   const [areaFilter, setAreaFilter] = useState<string | "all">("all");
 

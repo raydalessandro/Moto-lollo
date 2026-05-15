@@ -1,10 +1,15 @@
-# 30 · io.feed — Feed percorsi pubblici
+# 30 · io.feed — Feed community (route + post)
 
 > **Nota IA (2026-05-14):** dopo lo scioglimento del pillar MONDO, questa schermata è la **3ª tab del pillar IO** (key `io.feed`). Il file source resta `src/features/mondo/FeedScreen.tsx` per pulizia di import path; verrà rinominato in un cleanup futuro.
 
 ## Purpose
 
-Feed principale della community: percorsi pubblici. Due viste filtro (chi segui · tutti) + un toggle "solo percorsi anche per auto". L'utente scopre, legge la copertina, like/save/comment, eventualmente tap → detail.
+Feed principale della community. Due **tipi di contenuto** mischiati cronologicamente:
+
+- **Route** (`kind: "route"`): presentazione di un percorso. Card con hero gradient + cover text + meta (km/durata/anche-auto) + tags.
+- **Post** (`kind: "post"`): post social. Header autore, body testo, foto (1, 2, 3+), opzionalmente chip "Percorso linked" se ha sourceType+sourceId.
+
+Due viste filtro (chi segui · tutti) + un toggle "solo percorsi anche per auto" (che esclude i post quando attivo).
 
 File implementazione: `src/features/mondo/FeedScreen.tsx`.
 
