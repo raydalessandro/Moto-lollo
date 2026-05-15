@@ -20,7 +20,33 @@
 
 ---
 
-## Prossimo passo: **Fase 1 — MVP "IO solo"**
+## Prossimo passo: **integrazione Mapbox** (Step 1-2 della rampa pre-backend)
+
+Lo scaffolding Mapbox è già in repo:
+- `src/lib/mapbox.ts` · `src/lib/wake-lock.ts` · `src/lib/geolocation.ts`
+- `src/components/map/MapView.tsx` · `StaticMap.tsx`
+- `mapbox-gl` come dependency
+- `.env.local.example` con `NEXT_PUBLIC_MAPBOX_TOKEN`
+
+**In attesa di:** Ray fornisce il token. Setup:
+1. Crea account su [mapbox.com](https://mapbox.com)
+2. Dashboard → Access Tokens → crea public token (`pk.*`) con URL restriction su `localhost:*` + `*.vercel.app`
+3. Su Vercel: Settings → Environment Variables → aggiungi `NEXT_PUBLIC_MAPBOX_TOKEN`
+4. Mi dai go → wiring di MapView in NavigationOverlay + StaticMap nelle card
+
+Senza token l'app funziona com'è ora (fallback SVG).
+
+### Step successivi (dopo Mapbox)
+
+1. **Mapbox tile + geocoding** (in corso): vedi mappe reali in NavigationOverlay
+2. **GPS reale + Wake Lock + Directions**: tracking foreground + turn-by-turn
+3. **Supabase auth-only**: login vero, sessione propria
+4. **Activity persistence**: le uscite si salvano
+5. **Resto Fase 1**: garage, manutenzione, notifiche, storage media
+
+Vedi `docs/ROADMAP.md` per il dettaglio.
+
+## Fase 1 strict (post Mapbox): MVP "IO solo"
 
 Obiettivo: app installabile come PWA, con login Supabase, in cui Ray + 4-5 amici motociclisti possono:
 1. Registrare uscite GPS (tracking foreground con Wake Lock)

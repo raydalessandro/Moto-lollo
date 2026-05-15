@@ -8,6 +8,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Versioning [Se
 
 ## [Unreleased]
 
+### Aggiunto
+- **Mapbox scaffolding** (pronto per il wiring quando il token sarà disponibile su Vercel):
+  - Dipendenza `mapbox-gl` + `@types/mapbox-gl`
+  - `src/lib/mapbox.ts`: helper per token, Static Images URL, Geocoding, Directions
+  - `src/lib/wake-lock.ts`: hook `useWakeLock(active)` per tenere acceso lo schermo durante tracking
+  - `src/lib/geolocation.ts`: hook `useGeolocation(watching)` + helper `haversineMeters()`
+  - `src/components/map/MapView.tsx`: mappa interattiva Mapbox GL JS con dynamic import, layer per user position / route / live trail / destination. Fallback gradient scuro quando token mancante.
+  - `src/components/map/StaticMap.tsx`: mini-mappa via Mapbox Static Images. Fallback SVG procedurale (identico al mock attuale) quando token mancante.
+  - `.env.local.example`: template variabili
+- **Post social** nel Feed: `PublishedRoute` polimorfica via `kind: "route" | "post"`. Post hanno body + foto + opzionale percorso linked. Solo "route" entrano in Classifica.
+- **io.mappa** quadripartita: Creati / Caricati / Fatti / Salvati. Nuovo campo `PlannedRoute.source: "manual" | "gpx"`.
+
 ### Cambiato
 - **Information Architecture: da 3 pillar a 2 pillar**. Il pillar MONDO è stato sciolto:
   - **Feed** è diventato la 3ª tab del pillar IO (`io.feed`).

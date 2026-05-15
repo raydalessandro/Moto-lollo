@@ -29,6 +29,7 @@ Vedi [`HANDOFF.md`](./HANDOFF.md) per il punto di apertura sessione e [`docs/ROA
 ```bash
 nvm use                # legge .nvmrc (Node 22)
 npm install
+cp .env.local.example .env.local   # poi compila i valori (vedi sotto)
 npm run dev            # http://localhost:3000
 npm run build          # production build
 npm run typecheck      # tsc --noEmit
@@ -36,6 +37,14 @@ npm run lint           # eslint
 ```
 
 L'app è pensata per viewport mobile (max-width 768). Apri dev tools in modalità mobile per esperienza realistica.
+
+### Environment variables
+
+| Variabile | Quando serve | Note |
+|-----------|--------------|------|
+| `NEXT_PUBLIC_MAPBOX_TOKEN` | quando vuoi mappe reali (NavigationOverlay, mini-mappe) | Public token da [account.mapbox.com](https://account.mapbox.com/access-tokens/). URL restrict: `localhost:*` + `*.vercel.app` + eventuale domain. Se vuoto: l'app fa fallback ai mock SVG (esperienza identica all'attuale). |
+
+Su Vercel: Settings → Environment Variables → aggiungi `NEXT_PUBLIC_MAPBOX_TOKEN` per Production + Preview + Development.
 
 ---
 
