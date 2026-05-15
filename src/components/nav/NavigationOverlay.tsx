@@ -60,16 +60,16 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
     return () => clearInterval(id);
   }, [paused]);
 
-  // Append GPS points (with simple accuracy + dedup filter).
+  // Append GPS points (with accuracy + min-distance filter).
   useEffect(() => {
     if (!geo.position) return;
     const p = geo.position;
-    if (p.accuracy > 50) return; // skip noisy fix
+    if (p.accuracy > 30) return; // skip noisy fix (was 50, too loose)
     setPoints((prev) => {
       const last = prev[prev.length - 1];
       if (last && last.lat === p.lat && last.lon === p.lon) return prev;
-      // Skip if too close (< 5m, GPS noise on standstill).
-      if (last && haversineMeters(last, { lat: p.lat, lon: p.lon }) < 5) return prev;
+      // Skip if too close (< 10m). GPS in città può saltellare 5-8m da fermo.
+      if (last && haversineMeters(last, { lat: p.lat, lon: p.lon }) < 10) return prev;
       return [...prev, { lat: p.lat, lon: p.lon, t: p.t }];
     });
   }, [geo.position]);
@@ -116,7 +116,9 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
 
   const speedKmh = useMemo(() => {
     if (geo.position?.speed != null && geo.position.speed >= 0) {
-      return geo.position.speed * 3.6;
+      const kmh = geo.position.speed * 3.6;
+      // Filtro GPS noise: sotto 2 km/h è praticamente fermo (rumore del fix).
+      return kmh < 2 ? 0 : kmh;
     }
     return 0;
   }, [geo.position]);
@@ -150,7 +152,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
   const nextStep = mode.kind === "navigation" ? route?.steps[0] : undefined;
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-bg">
+    <div className="fixed inset-0 z-50 flex flex-col bg-bg">
       {/* Live status header */}
       <header
         className="flex shrink-0 items-center justify-between border-b border-line px-4 py-3"
