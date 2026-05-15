@@ -186,7 +186,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
       </header>
 
       {/* Map area (Mapbox real or SVG fallback) */}
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative h-full flex-1 overflow-hidden">
         <MapView
           userLocation={
             geo.position
