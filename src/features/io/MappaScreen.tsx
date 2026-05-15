@@ -139,6 +139,7 @@ export function MappaScreen() {
 // ─── Card per ogni tipo ──────────────────────────────────────────────────────
 
 function ArchiveCard({ item }: { item: ArchiveItem }) {
+  const now = useQuery((_db, _uid, n) => n);
   const meta = itemMeta(item);
   const polylineSeed =
     item.kind === "activity"
@@ -179,7 +180,7 @@ function ArchiveCard({ item }: { item: ArchiveItem }) {
             <span className="font-mono tabular-nums">{meta.duration}</span>
           )}
           <span className="font-mono text-[10px] uppercase tracking-widest">
-            {formatRelativeDate(item.date)}
+            {formatRelativeDate(item.date, now)}
           </span>
           <span className="ml-auto flex gap-1">
             {meta.tags.slice(0, 2).map((t) => (
@@ -310,9 +311,8 @@ function formatDurationSec(sec: number): string {
   return formatDurationMin(Math.round(sec / 60));
 }
 
-function formatRelativeDate(iso: string): string {
-  const now = Date.now();
-  const diff = now - new Date(iso).getTime();
+function formatRelativeDate(iso: string, nowIso: string): string {
+  const diff = new Date(nowIso).getTime() - new Date(iso).getTime();
   const days = Math.floor(diff / 86_400_000);
   if (days < 1) return "oggi";
   if (days < 7) return `${days}g fa`;

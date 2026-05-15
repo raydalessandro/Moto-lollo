@@ -114,6 +114,7 @@ function RankRow({
 }) {
   const author = useQuery((db) => getProfile(db, route.ownerId));
   const likes = useQuery((db) => countLikes(db, route.id));
+  const now = useQuery((_db, _uid, n) => n);
 
   const medalColor =
     rank === 1 ? "#c8a24b" : rank === 2 ? "#b8b8b8" : rank === 3 ? "#c88248" : "var(--ink-mute)";
@@ -125,7 +126,7 @@ function RankRow({
         ? { label: "salvato da", value: route.savedCount }
         : sort === "likes"
           ? { label: "like", value: likes }
-          : { label: "pubblicato", value: relativeDate(route.publishedAt) };
+          : { label: "pubblicato", value: relativeDate(route.publishedAt, now) };
 
   return (
     <Card>
@@ -222,8 +223,8 @@ function CounterCell({
   );
 }
 
-function relativeDate(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
+function relativeDate(iso: string, nowIso: string): string {
+  const ms = new Date(nowIso).getTime() - new Date(iso).getTime();
   const days = Math.floor(ms / 86_400_000);
   if (days < 1) return "oggi";
   if (days < 7) return `${days}g fa`;
