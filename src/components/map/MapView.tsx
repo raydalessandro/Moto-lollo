@@ -65,6 +65,8 @@ function LiveMaplibreView({
         const initialCenter: [number, number] =
           center ?? (userLocation ? [userLocation.lon, userLocation.lat] : [10.0, 45.5]);
 
+        console.log("[MapView] init with style:", MAP_STYLE_URL);
+
         map = new maplibregl.Map({
           container: containerRef.current,
           style: MAP_STYLE_URL,
@@ -78,15 +80,17 @@ function LiveMaplibreView({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const m = map as any;
         m.on("error", (e: { error?: Error }) => {
-          console.error("[Map] error:", e?.error?.message ?? e);
+          console.error("[MapView] error:", e?.error?.message ?? e);
         });
+        m.on("styledata", () => console.log("[MapView] styledata"));
         m.on("load", () => {
           if (cancelled) return;
+          console.log("[MapView] load OK");
           m.resize();
           setReady(true);
         });
       } catch (err) {
-        console.error("[Map] init failed:", err);
+        console.error("[MapView] init failed:", err);
       }
     })();
 
