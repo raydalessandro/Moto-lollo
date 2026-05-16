@@ -61,6 +61,10 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
   const announcedRef = useRef<Set<string>>(new Set());
   const offRouteSinceRef = useRef<number | null>(null);
 
+  // Arrival (Fase D).
+  const [arrived, setArrived] = useState(false);
+  const arrivedSinceRef = useRef<number | null>(null);
+
   // Navigation flow state (search → preview → navigating).
   const [navPhase, setNavPhase] = useState<NavPhase>(
     mode.kind === "navigation" ? "search" : "navigating",
@@ -109,7 +113,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
   // Step progression: ad ogni GPS fix in navigating, ricalcola progress.
   // Include voice cues (200m + 50m prima della maneuver) e detection off-route.
   useEffect(() => {
-    if (!geo.position || !route || navPhase !== "navigating") return;
+    if (!geo.position || !route || navPhase !== "navigating" || arrived) return;
     const prog = computeNavProgress(
       route,
       { lat: geo.position.lat, lon: geo.position.lon },
@@ -143,6 +147,25 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
       ) {
         announcedRef.current.add(nearKey);
         speak(step.instruction, nearKey);
+      }
+    }
+
+    // Arrival detection — < 30m dalla destinazione per > 3s consecutivi.
+    if (chosenDestination && !arrived) {
+      const distToDest = haversineMeters(
+        { lat: geo.position.lat, lon: geo.position.lon },
+        { lat: chosenDestination.center[1], lon: chosenDestination.center[0] },
+      );
+      if (distToDest < 30) {
+        if (arrivedSinceRef.current === null) {
+          arrivedSinceRef.current = Date.now();
+        } else if (Date.now() - arrivedSinceRef.current > 3000) {
+          setArrived(true);
+          if (voiceEnabled) speak("Sei arrivato a destinazione");
+          return; // skip off-route logic dopo arrivo
+        }
+      } else {
+        arrivedSinceRef.current = null;
       }
     }
 
@@ -181,7 +204,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
     } else {
       offRouteSinceRef.current = null;
     }
-  }, [geo.position, route, navPhase, voiceEnabled, rerouting, chosenDestination]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [geo.position, route, navPhase, voiceEnabled, rerouting, chosenDestination, arrived]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cancella speech quando esci dal navigating o smonta overlay.
   useEffect(() => {
@@ -307,7 +330,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
 
   // Next maneuver dal progress engine.
   const nextStep =
-    mode.kind === "navigation" && navPhase === "navigating" && navProgress && route
+    mode.kind === "navigation" && navPhase === "navigating" && navProgress && route && !arrived
       ? route.steps[navProgress.currentStepIndex]
       : undefined;
   const metersToManeuver = navProgress?.metersToManeuver ?? 0;
@@ -394,7 +417,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
             accent={accent}
           />
           <SpeedBubble speed={speedKmh} accent={accent} />
-          {mode.kind === "navigation" && navPhase === "navigating" && (
+          {mode.kind === "navigation" && navPhase === "navigating" && !arrived && (
             <VoiceToggle
               enabled={voiceEnabled}
               onToggle={() => {
@@ -416,7 +439,15 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
         </MapView>
       </div>
 
-      {mode.kind === "navigation" && navPhase === "preview" && route ? (
+      {arrived ? (
+        <ArrivalSummary
+          placeName={chosenDestination?.placeName ?? ""}
+          distanceKm={distanceKm}
+          elapsedSec={elapsedSec}
+          accent={accent}
+          onClose={onClose}
+        />
+      ) : mode.kind === "navigation" && navPhase === "preview" && route ? (
         <RoutePreviewCard
           route={route}
           placeName={chosenDestination?.placeName ?? ""}
@@ -427,6 +458,8 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
             setNavProgress(null);
             announcedRef.current = new Set();
             offRouteSinceRef.current = null;
+            arrivedSinceRef.current = null;
+            setArrived(false);
             setNavPhase("navigating");
           }}
           onChange={() => {
@@ -896,6 +929,95 @@ function ReroutingIndicator({ accent }: { accent: string }) {
       >
         Ricalcolo percorso…
       </span>
+    </div>
+  );
+}
+
+// ─── Arrival summary (sostituisce HUD quando arrived === true) ─────────────
+
+function ArrivalSummary({
+  placeName,
+  distanceKm,
+  elapsedSec,
+  accent,
+  onClose,
+}: {
+  placeName: string;
+  distanceKm: number;
+  elapsedSec: number;
+  accent: string;
+  onClose: () => void;
+}) {
+  const h = Math.floor(elapsedSec / 3600);
+  const m = Math.floor((elapsedSec % 3600) / 60);
+  const s = elapsedSec % 60;
+  const durationLabel =
+    h > 0
+      ? `${h}h ${String(m).padStart(2, "0")}m`
+      : `${m}m ${String(s).padStart(2, "0")}s`;
+  const avg =
+    distanceKm > 0 && elapsedSec > 0
+      ? (distanceKm / (elapsedSec / 3600)).toFixed(0)
+      : "0";
+
+  return (
+    <div className="shrink-0 border-t border-line bg-bg">
+      <div className="px-4 py-3">
+        <div
+          className="font-mono text-[9px] uppercase tracking-widest"
+          style={{ color: accent }}
+        >
+          Sei arrivato
+        </div>
+        <div className="truncate font-display text-base font-semibold">
+          {placeName}
+        </div>
+      </div>
+      <div className="grid grid-cols-3 border-y border-line">
+        {[
+          { label: "distanza", value: distanceKm.toFixed(1), unit: "km", color: accent },
+          { label: "durata", value: durationLabel, unit: "" },
+          { label: "media", value: avg, unit: "km/h" },
+        ].map((h, i) => (
+          <div
+            key={i}
+            className="px-4 py-3"
+            style={{ borderLeft: i > 0 ? "1px solid var(--line)" : undefined }}
+          >
+            <div className="font-mono text-[9px] uppercase tracking-widest text-ink-dim">
+              {h.label}
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span
+                className="font-display text-2xl font-medium tabular-nums leading-none"
+                style={h.color ? { color: h.color } : undefined}
+              >
+                {h.value}
+              </span>
+              {h.unit && (
+                <span className="font-mono text-[10px] uppercase tracking-widest text-ink-dim">
+                  {h.unit}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-3 px-4 py-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 font-mono text-[11px] uppercase tracking-wider"
+          style={{
+            borderColor: accent,
+            background: `${accent}14`,
+            color: accent,
+          }}
+        >
+          <Icon d="M5 12h14 M12 5l7 7-7 7" size={14} />
+          Chiudi
+        </button>
+      </div>
     </div>
   );
 }
