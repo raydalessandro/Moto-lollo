@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useDb, useQuery } from "@/mocks/DbProvider";
 import {
   listMyMotorcycles,
@@ -10,6 +10,7 @@ import {
 } from "@/mocks/queries";
 import { Icon } from "@/components/nav/Icon";
 import { GarageDetailModal, type GarageCategory } from "./GarageDetailModal";
+import { VehiclePickerOverlay } from "./VehiclePickerOverlay";
 import type { Document, MaintenanceRecord, Motorcycle } from "@/types/domain";
 
 function daysUntil(iso: string, nowIso: string): number {
@@ -217,8 +218,7 @@ export function GarageScreen() {
     primary ? listMaintenanceForBike(db, primary.id) : [],
   );
   const [openCategory, setOpenCategory] = useState<GarageCategory | null>(null);
-
-  const otherBikes = bikes.filter((b) => !b.isPrimary);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Doc filtrati per la moto primaria (se motorcycleId è settato) + ownerLevel.
   const bikeDocs = useMemo(
@@ -241,6 +241,15 @@ export function GarageScreen() {
     [bikeDocs, maintenance, primary, now],
   );
 
+  const currentIdx = primary ? bikes.findIndex((b) => b.id === primary.id) : -1;
+  const cycleVehicle = (direction: 1 | -1) => {
+    if (bikes.length < 2 || currentIdx < 0) return;
+    const next = (currentIdx + direction + bikes.length) % bikes.length;
+    setPrimaryMotorcycle(bikes[next].id);
+  };
+
+  const vehicleNoun = primary?.kind === "auto" ? "auto" : "moto";
+
   return (
     <div className="screen-enter flex flex-col gap-4 p-4 pb-24">
       <header className="flex items-baseline justify-between">
@@ -257,13 +266,21 @@ export function GarageScreen() {
         <button
           type="button"
           className="font-mono text-[10px] uppercase tracking-widest text-ink-dim hover:text-ember"
-          aria-label="Aggiungi moto"
+          aria-label={`Aggiungi ${vehicleNoun}`}
         >
-          + nuova moto
+          + nuovo veicolo
         </button>
       </header>
 
-      {primary && <PrimaryBikeHero bike={primary} />}
+      {primary && (
+        <PrimaryBikeHero
+          bike={primary}
+          totalCount={bikes.length}
+          index={currentIdx}
+          onSwipe={cycleVehicle}
+          onOpenPicker={() => setPickerOpen(true)}
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         {(Object.keys(CATEGORY_META) as GarageCategory[]).map((cat) => (
@@ -276,43 +293,16 @@ export function GarageScreen() {
         ))}
       </div>
 
-      {otherBikes.length > 0 && (
-        <section className="mt-2">
-          <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-ink-dim">
-            Altre moto
-          </div>
-          <div className="flex flex-col gap-2">
-            {otherBikes.map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => setPrimaryMotorcycle(b.id)}
-                className="flex items-center justify-between gap-3 rounded-lg border border-line bg-panel px-3 py-2.5 text-left transition-colors hover:border-line-soft"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-soft text-ink-dim">
-                    <Icon
-                      d="M5 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M19 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M7 15h10 M9 11l2-4h4l2 4"
-                      size={14}
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate font-display text-sm font-medium">
-                      {b.brand} {b.model}
-                    </div>
-                    <div className="font-mono text-[10px] text-ink-dim">
-                      {b.name} · {b.totalKm.toLocaleString("it-IT")} km
-                    </div>
-                  </div>
-                </div>
-                <span className="font-mono text-[9px] uppercase tracking-widest text-ink-mute">
-                  rendi prim.
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
+      <VehiclePickerOverlay
+        open={pickerOpen}
+        vehicles={bikes}
+        currentId={primary?.id ?? ""}
+        onPick={(id) => {
+          setPrimaryMotorcycle(id);
+          setPickerOpen(false);
+        }}
+        onClose={() => setPickerOpen(false)}
+      />
 
       {openCategory && primary && (
         <GarageDetailModal
@@ -331,16 +321,83 @@ export function GarageScreen() {
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
-function PrimaryBikeHero({ bike }: { bike: Motorcycle }) {
+function PrimaryBikeHero({
+  bike,
+  totalCount,
+  index,
+  onSwipe,
+  onOpenPicker,
+}: {
+  bike: Motorcycle;
+  totalCount: number;
+  index: number;
+  onSwipe: (direction: 1 | -1) => void;
+  onOpenPicker: () => void;
+}) {
+  const touchRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFiredRef = useRef(false);
+  const isAuto = bike.kind === "auto";
+  const noun = isAuto ? "auto" : "moto";
+  const ccUnit = isAuto ? "cm³" : "cc";
+
+  const clearLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchRef.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+    longPressFiredRef.current = false;
+    clearLongPress();
+    if (totalCount > 1) {
+      longPressTimerRef.current = setTimeout(() => {
+        longPressFiredRef.current = true;
+        onOpenPicker();
+      }, 500);
+    }
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!touchRef.current) return;
+    const t = e.touches[0];
+    const dx = Math.abs(t.clientX - touchRef.current.x);
+    const dy = Math.abs(t.clientY - touchRef.current.y);
+    // Movimento significativo cancella long-press
+    if (dx > 10 || dy > 10) clearLongPress();
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    clearLongPress();
+    const start = touchRef.current;
+    touchRef.current = null;
+    if (!start || longPressFiredRef.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const dt = Date.now() - start.t;
+    // Swipe orizzontale: > 50px, prevalentemente orizzontale, < 600ms
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600) {
+      onSwipe(dx < 0 ? 1 : -1);
+    }
+  };
+
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-line p-4"
+      className="relative overflow-hidden rounded-2xl border border-line p-4 select-none [-webkit-touch-callout:none]"
       style={{
         background:
           "linear-gradient(135deg, rgba(255,106,31,0.12) 0%, rgba(255,106,31,0.04) 50%, var(--panel) 100%)",
+        touchAction: "pan-y",
       }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
-      {/* Motorcycle silhouette as background */}
+      {/* Silhouette dinamico moto/auto */}
       <svg
         viewBox="0 0 200 80"
         className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-[0.08]"
@@ -351,39 +408,88 @@ function PrimaryBikeHero({ bike }: { bike: Motorcycle }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <circle cx={40} cy={56} r={16} />
-        <circle cx={160} cy={56} r={16} />
-        <path d="M40 56 L70 30 L110 30 L130 56 L160 56" />
-        <path d="M70 30 L85 18 L110 18" />
-        <path d="M110 18 L115 30" />
-        <path d="M100 30 L100 45" />
+        {isAuto ? (
+          <>
+            <path d="M20 58 L36 36 L80 30 L120 30 L150 38 L180 44 L182 58 Z" />
+            <path d="M20 58 L182 58" />
+            <circle cx={55} cy={62} r={10} />
+            <circle cx={150} cy={62} r={10} />
+            <path d="M80 30 L80 50 M115 30 L115 50" />
+          </>
+        ) : (
+          <>
+            <circle cx={40} cy={56} r={16} />
+            <circle cx={160} cy={56} r={16} />
+            <path d="M40 56 L70 30 L110 30 L130 56 L160 56" />
+            <path d="M70 30 L85 18 L110 18" />
+            <path d="M110 18 L115 30" />
+            <path d="M100 30 L100 45" />
+          </>
+        )}
       </svg>
 
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-mono text-[10px] uppercase tracking-widest text-ember/80">
-            moto primaria
+            {noun} primaria
           </div>
           {bike.name && (
-            <div className="mt-1 font-display text-lg font-semibold italic">
-              «{bike.name}»
-            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (totalCount > 1) onOpenPicker();
+              }}
+              className="mt-1 inline-flex items-center gap-1.5 font-display text-lg font-semibold italic transition-colors hover:text-ember"
+              aria-label="Cambia veicolo"
+            >
+              <span>«{bike.name}»</span>
+              {totalCount > 1 && (
+                <span
+                  className="font-mono text-[10px] not-italic text-ink-dim"
+                  aria-hidden
+                >
+                  ▾
+                </span>
+              )}
+            </button>
           )}
           <div className="mt-1 font-mono text-[11px] uppercase tracking-wider text-ink-soft">
             {bike.year ?? "—"}
-            {bike.engineCc && ` · ${bike.engineCc}cc`}
+            {bike.engineCc && ` · ${bike.engineCc} ${ccUnit}`}
             {bike.color && ` · ${bike.color}`}
           </div>
         </div>
       </div>
 
-      <div className="relative mt-6 flex items-baseline gap-1">
-        <span className="font-display text-3xl font-medium tabular-nums leading-none text-ember">
-          {bike.totalKm.toLocaleString("it-IT")}
-        </span>
-        <span className="font-mono text-[11px] uppercase tracking-widest text-ink-dim">
-          km totali
-        </span>
+      <div className="relative mt-6 flex items-end justify-between gap-3">
+        <div className="flex items-baseline gap-1">
+          <span className="font-display text-3xl font-medium tabular-nums leading-none text-ember">
+            {bike.totalKm.toLocaleString("it-IT")}
+          </span>
+          <span className="font-mono text-[11px] uppercase tracking-widest text-ink-dim">
+            km totali
+          </span>
+        </div>
+
+        {totalCount > 1 && (
+          <div
+            className="flex items-center gap-1.5"
+            aria-label={`Veicolo ${index + 1} di ${totalCount}`}
+          >
+            {Array.from({ length: totalCount }).map((_, i) => (
+              <span
+                key={i}
+                className="h-1.5 rounded-full transition-all"
+                style={{
+                  width: i === index ? 14 : 5,
+                  background:
+                    i === index ? "var(--ember)" : "rgba(255,255,255,0.18)",
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
