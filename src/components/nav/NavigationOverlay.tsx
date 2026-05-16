@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "./Icon";
 import { MapView } from "@/components/map/MapView";
 import { useGeolocation, haversineMeters } from "@/lib/geolocation";
@@ -13,6 +13,7 @@ import {
   type DirectionsRoute,
   type GeocodeResult,
 } from "@/lib/maps";
+import { speak, cancelSpeech, isVoiceAvailable } from "@/lib/voice";
 import {
   computeNavProgress,
   maneuverIconPath,
@@ -53,6 +54,12 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
   );
   const [route, setRoute] = useState<DirectionsRoute | null>(null);
   const [navProgress, setNavProgress] = useState<NavProgress | null>(null);
+
+  // Voice + reroute (Fase C).
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [rerouting, setRerouting] = useState(false);
+  const announcedRef = useRef<Set<string>>(new Set());
+  const offRouteSinceRef = useRef<number | null>(null);
 
   // Navigation flow state (search → preview → navigating).
   const [navPhase, setNavPhase] = useState<NavPhase>(
@@ -100,6 +107,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
   }, [geo.position, navPhase]);
 
   // Step progression: ad ogni GPS fix in navigating, ricalcola progress.
+  // Include voice cues (200m + 50m prima della maneuver) e detection off-route.
   useEffect(() => {
     if (!geo.position || !route || navPhase !== "navigating") return;
     const prog = computeNavProgress(
@@ -108,7 +116,78 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
       navProgress?.currentStepIndex ?? 0,
     );
     setNavProgress(prog);
-  }, [geo.position, route, navPhase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Voice cues — solo se non off-route (per non annunciare svolte che
+    // saranno sostituite da reroute) e non in mezzo a un reroute.
+    const step = route.steps[prog.currentStepIndex];
+    if (voiceEnabled && step && !prog.isOffRoute && !rerouting) {
+      const farKey = `s${prog.currentStepIndex}-far`;
+      const nearKey = `s${prog.currentStepIndex}-near`;
+      // "Tra 200m, X" — solo se lo step è lungo abbastanza da giustificarlo,
+      // e skipping depart (type 11) che non ha senso annunciare in lontananza.
+      if (
+        step.type !== 11 &&
+        step.distanceM > 250 &&
+        prog.metersToManeuver < 250 &&
+        prog.metersToManeuver > 60 &&
+        !announcedRef.current.has(farKey)
+      ) {
+        announcedRef.current.add(farKey);
+        speak(`Tra 200 metri, ${step.instruction}`, farKey);
+      }
+      // "X" — annuncio ravvicinato.
+      if (
+        step.type !== 11 &&
+        prog.metersToManeuver < 60 &&
+        !announcedRef.current.has(nearKey)
+      ) {
+        announcedRef.current.add(nearKey);
+        speak(step.instruction, nearKey);
+      }
+    }
+
+    // Off-route detection — accumula timer ref-based per sopravvivere
+    // ai re-render senza far ripartire l'effect.
+    if (prog.isOffRoute) {
+      if (offRouteSinceRef.current === null) {
+        offRouteSinceRef.current = Date.now();
+      } else if (
+        !rerouting &&
+        chosenDestination &&
+        Date.now() - offRouteSinceRef.current > 5000
+      ) {
+        // Trigger reroute.
+        offRouteSinceRef.current = null;
+        setRerouting(true);
+        cancelSpeech();
+        (async () => {
+          try {
+            const r = await getDirections({
+              origin: [geo.position!.lon, geo.position!.lat],
+              destination: chosenDestination.center,
+            });
+            if (r) {
+              announcedRef.current = new Set();
+              setRoute(r);
+              setNavProgress(null);
+            }
+          } catch (e) {
+            console.warn("Reroute failed:", e);
+          } finally {
+            setRerouting(false);
+          }
+        })();
+      }
+    } else {
+      offRouteSinceRef.current = null;
+    }
+  }, [geo.position, route, navPhase, voiceEnabled, rerouting, chosenDestination]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cancella speech quando esci dal navigating o smonta overlay.
+  useEffect(() => {
+    if (navPhase !== "navigating") cancelSpeech();
+    return () => cancelSpeech();
+  }, [navPhase]);
 
   // Debounced geocoding while typing in search.
   useEffect(() => {
@@ -315,6 +394,20 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
             accent={accent}
           />
           <SpeedBubble speed={speedKmh} accent={accent} />
+          {mode.kind === "navigation" && navPhase === "navigating" && (
+            <VoiceToggle
+              enabled={voiceEnabled}
+              onToggle={() => {
+                setVoiceEnabled((v) => {
+                  const next = !v;
+                  if (!next) cancelSpeech();
+                  return next;
+                });
+              }}
+              accent={accent}
+            />
+          )}
+          {rerouting && <ReroutingIndicator accent={accent} />}
           {geo.status === "denied" && (
             <div className="absolute left-3 right-3 top-3 rounded-xl border border-danger/40 bg-bg/90 px-3 py-2 text-center text-[11px] text-danger backdrop-blur-sm">
               Permesso GPS negato. Riattivalo dalle impostazioni del browser.
@@ -332,6 +425,8 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
             setElapsedSec(0);
             setPoints([]);
             setNavProgress(null);
+            announcedRef.current = new Set();
+            offRouteSinceRef.current = null;
             setNavPhase("navigating");
           }}
           onChange={() => {
@@ -740,6 +835,67 @@ function RoutePreviewCard({
           Avvia
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── Voice toggle (top-right above SpeedBubble) ────────────────────────────
+
+function VoiceToggle({
+  enabled,
+  onToggle,
+  accent,
+}: {
+  enabled: boolean;
+  onToggle: () => void;
+  accent: string;
+}) {
+  const available = isVoiceAvailable();
+  const path = enabled
+    ? "M11 5 L6 9 H3 v6 h3 l5 4 z M16 9 a5 5 0 0 1 0 6 M19 7 a8 8 0 0 1 0 10"
+    : "M11 5 L6 9 H3 v6 h3 l5 4 z M16 9 l5 6 M21 9 l-5 6";
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={!available}
+      aria-label={enabled ? "Disattiva voce" : "Attiva voce"}
+      className="absolute bottom-24 right-3 flex h-12 w-12 items-center justify-center rounded-full border disabled:opacity-40"
+      style={{
+        background: "rgba(5,4,3,0.85)",
+        backdropFilter: "blur(8px)",
+        borderColor: `${accent}55`,
+        color: enabled ? accent : "var(--ink-dim)",
+      }}
+    >
+      <Icon d={path} size={18} />
+    </button>
+  );
+}
+
+// ─── Rerouting indicator (centro mappa, opaco, durante fetch directions) ───
+
+function ReroutingIndicator({ accent }: { accent: string }) {
+  return (
+    <div
+      className="pointer-events-none absolute left-1/2 top-20 flex -translate-x-1/2 items-center gap-2 rounded-full border px-4 py-2"
+      style={{
+        background: "rgba(5,4,3,0.92)",
+        backdropFilter: "blur(8px)",
+        borderColor: `${accent}55`,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+      }}
+    >
+      <span
+        className="live-pulse-dot inline-block h-2 w-2 rounded-full"
+        style={{ background: accent }}
+      />
+      <span
+        className="font-mono text-[10px] uppercase tracking-widest"
+        style={{ color: accent }}
+      >
+        Ricalcolo percorso…
+      </span>
     </div>
   );
 }
