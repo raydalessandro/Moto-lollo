@@ -165,11 +165,19 @@ export interface DirectionsStep {
   instruction: string;
   distanceM: number;
   durationS: number;
+  /** ORS maneuver type code (0=left, 1=right, 6=straight, 10=arrive, 11=depart, …). */
+  type: number;
+  /** [startIdx, endIdx] indices into route.coordinates for this step's geometry. */
+  wayPoints: [number, number];
+  /** Street/road name (può essere vuoto se ORS non lo ha). */
+  name?: string;
 }
 
 export interface DirectionsRoute {
   /** Polyline encoded (precision 5). */
   polyline: string;
+  /** Geometria decodata [lon, lat] per proximity matching. */
+  coordinates: Array<[number, number]>;
   distanceM: number;
   durationS: number;
   steps: DirectionsStep[];
@@ -207,7 +215,14 @@ export async function getDirections(opts: {
   const data = await res.json();
 
   // ORS standard response: routes[0].geometry (polyline encoded), summary, segments[0].steps
-  type ORSStep = { instruction: string; distance: number; duration: number };
+  type ORSStep = {
+    instruction: string;
+    distance: number;
+    duration: number;
+    type: number;
+    way_points: [number, number];
+    name?: string;
+  };
   type ORSRoute = {
     geometry: string;
     summary: { distance: number; duration: number };
@@ -219,12 +234,16 @@ export async function getDirections(opts: {
 
   return {
     polyline: r.geometry,
+    coordinates: decodePolyline(r.geometry),
     distanceM: r.summary.distance,
     durationS: r.summary.duration,
     steps: (r.segments[0]?.steps ?? []).map((s) => ({
       instruction: s.instruction,
       distanceM: s.distance,
       durationS: s.duration,
+      type: s.type,
+      wayPoints: s.way_points,
+      name: s.name,
     })),
   };
 }

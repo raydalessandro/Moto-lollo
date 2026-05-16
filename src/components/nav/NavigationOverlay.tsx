@@ -13,6 +13,14 @@ import {
   type DirectionsRoute,
   type GeocodeResult,
 } from "@/lib/maps";
+import {
+  computeNavProgress,
+  maneuverIconPath,
+  formatDistance,
+  formatDuration,
+  formatEta,
+  type NavProgress,
+} from "@/lib/navigation";
 
 export type NavMode =
   | { kind: "tracking"; title?: string }
@@ -44,6 +52,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
     [],
   );
   const [route, setRoute] = useState<DirectionsRoute | null>(null);
+  const [navProgress, setNavProgress] = useState<NavProgress | null>(null);
 
   // Navigation flow state (search → preview → navigating).
   const [navPhase, setNavPhase] = useState<NavPhase>(
@@ -89,6 +98,17 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
       return [...prev, { lat: p.lat, lon: p.lon, t: p.t }];
     });
   }, [geo.position, navPhase]);
+
+  // Step progression: ad ogni GPS fix in navigating, ricalcola progress.
+  useEffect(() => {
+    if (!geo.position || !route || navPhase !== "navigating") return;
+    const prog = computeNavProgress(
+      route,
+      { lat: geo.position.lat, lon: geo.position.lon },
+      navProgress?.currentStepIndex ?? 0,
+    );
+    setNavProgress(prog);
+  }, [geo.position, route, navPhase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced geocoding while typing in search.
   useEffect(() => {
@@ -206,12 +226,12 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
             : "Turn-by-turn"
         : mode.rideTitle;
 
-  // Next maneuver: prima istruzione del route. TODO: avanzare lo step
-  // man mano che la posizione si avvicina al successivo punto-svolta.
+  // Next maneuver dal progress engine.
   const nextStep =
-    mode.kind === "navigation" && navPhase === "navigating"
-      ? route?.steps[0]
+    mode.kind === "navigation" && navPhase === "navigating" && navProgress && route
+      ? route.steps[navProgress.currentStepIndex]
       : undefined;
+  const metersToManeuver = navProgress?.metersToManeuver ?? 0;
 
   const phaseLabel =
     mode.kind === "navigation"
@@ -289,7 +309,11 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
           destination={chosenDestination?.center ?? undefined}
           fallback={<MapBackdropFallback accent={accent} mode={mode} />}
         >
-          <NextManeuverBanner step={nextStep} accent={accent} />
+          <NextManeuverBanner
+            step={nextStep}
+            metersToManeuver={metersToManeuver}
+            accent={accent}
+          />
           <SpeedBubble speed={speedKmh} accent={accent} />
           {geo.status === "denied" && (
             <div className="absolute left-3 right-3 top-3 rounded-xl border border-danger/40 bg-bg/90 px-3 py-2 text-center text-[11px] text-danger backdrop-blur-sm">
@@ -307,6 +331,7 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
           onStart={() => {
             setElapsedSec(0);
             setPoints([]);
+            setNavProgress(null);
             setNavPhase("navigating");
           }}
           onChange={() => {
@@ -319,27 +344,47 @@ export function NavigationOverlay({ mode, onClose }: NavigationOverlayProps) {
       /* HUD */
       <div className="shrink-0 border-t border-line bg-bg">
         <div className="grid grid-cols-3 border-b border-line">
-          {[
-            {
-              label: subtitle,
-              value: distanceKm.toFixed(1),
-              unit: "km",
-              color: accent,
-            },
-            {
-              label: "tempo",
-              value: `${elapsedH > 0 ? elapsedH + "h " : ""}${String(elapsedM).padStart(2, "0")}:${String(elapsedS).padStart(2, "0")}`,
-              unit: "",
-            },
-            {
-              label: "media",
-              value:
-                distanceKm > 0 && elapsedSec > 0
-                  ? (distanceKm / (elapsedSec / 3600)).toFixed(0)
-                  : "0",
-              unit: "km/h",
-            },
-          ].map((h, i) => (
+          {(mode.kind === "navigation" && navProgress
+            ? [
+                {
+                  label: "fatti",
+                  value: distanceKm.toFixed(1),
+                  unit: "km",
+                  color: accent,
+                },
+                {
+                  label: "rimanenti",
+                  value: (navProgress.remainingDistanceM / 1000).toFixed(1),
+                  unit: "km",
+                },
+                {
+                  label: `arrivo · ${formatEta(navProgress.remainingDurationS)}`,
+                  value: formatDuration(navProgress.remainingDurationS),
+                  unit: "",
+                },
+              ]
+            : [
+                {
+                  label: subtitle,
+                  value: distanceKm.toFixed(1),
+                  unit: "km",
+                  color: accent,
+                },
+                {
+                  label: "tempo",
+                  value: `${elapsedH > 0 ? elapsedH + "h " : ""}${String(elapsedM).padStart(2, "0")}:${String(elapsedS).padStart(2, "0")}`,
+                  unit: "",
+                },
+                {
+                  label: "media",
+                  value:
+                    distanceKm > 0 && elapsedSec > 0
+                      ? (distanceKm / (elapsedSec / 3600)).toFixed(0)
+                      : "0",
+                  unit: "km/h",
+                },
+              ]
+          ).map((h, i) => (
             <div
               key={i}
               className="px-4 py-3"
@@ -450,13 +495,14 @@ function MapBackdropFallback({ accent, mode }: { accent: string; mode: NavMode }
 
 function NextManeuverBanner({
   step,
+  metersToManeuver,
   accent,
 }: {
-  step?: { instruction: string; distanceM: number };
+  step?: { instruction: string; distanceM: number; type: number; name?: string };
+  metersToManeuver: number;
   accent: string;
 }) {
   if (!step) return null;
-  const km = (step.distanceM / 1000).toFixed(1);
   return (
     <div
       className="absolute left-3 right-3 top-3 flex items-center gap-3 rounded-xl border px-3 py-3"
@@ -471,11 +517,11 @@ function NextManeuverBanner({
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
         style={{ background: `${accent}20`, color: accent }}
       >
-        <Icon d="M3 12h13 M13 6l6 6-6 6" size={20} />
+        <Icon d={maneuverIconPath(step.type)} size={22} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="font-mono text-[9px] uppercase tracking-widest text-ink-dim">
-          tra {step.distanceM < 1000 ? `${Math.round(step.distanceM)} m` : `${km} km`}
+          tra {formatDistance(metersToManeuver)}
         </div>
         <div className="truncate font-display text-sm font-semibold">
           {step.instruction}
