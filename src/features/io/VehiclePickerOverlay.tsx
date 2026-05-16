@@ -152,7 +152,7 @@ export function VehiclePickerOverlay({
         </ul>
 
         <footer className="border-t border-line px-4 py-2 text-center font-mono text-[9px] uppercase tracking-widest text-ink-mute">
-          tieni premuto sull&apos;hero · oppure scorri ←/→
+          scorri ← / → sull&apos;hero per cambiare veicolo
         </footer>
       </aside>
     </div>

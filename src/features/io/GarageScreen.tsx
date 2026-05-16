@@ -335,46 +335,19 @@ function PrimaryBikeHero({
   onOpenPicker: () => void;
 }) {
   const touchRef = useRef<{ x: number; y: number; t: number } | null>(null);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressFiredRef = useRef(false);
   const isAuto = bike.kind === "auto";
   const noun = isAuto ? "auto" : "moto";
   const ccUnit = isAuto ? "cm³" : "cc";
 
-  const clearLongPress = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
     touchRef.current = { x: t.clientX, y: t.clientY, t: Date.now() };
-    longPressFiredRef.current = false;
-    clearLongPress();
-    if (totalCount > 1) {
-      longPressTimerRef.current = setTimeout(() => {
-        longPressFiredRef.current = true;
-        onOpenPicker();
-      }, 500);
-    }
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!touchRef.current) return;
-    const t = e.touches[0];
-    const dx = Math.abs(t.clientX - touchRef.current.x);
-    const dy = Math.abs(t.clientY - touchRef.current.y);
-    // Movimento significativo cancella long-press
-    if (dx > 10 || dy > 10) clearLongPress();
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
-    clearLongPress();
     const start = touchRef.current;
     touchRef.current = null;
-    if (!start || longPressFiredRef.current) return;
+    if (!start) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
@@ -387,14 +360,13 @@ function PrimaryBikeHero({
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-line p-4 select-none [-webkit-touch-callout:none]"
+      className="relative overflow-hidden rounded-2xl border border-line p-4 select-none"
       style={{
         background:
           "linear-gradient(135deg, rgba(255,106,31,0.12) 0%, rgba(255,106,31,0.04) 50%, var(--panel) 100%)",
         touchAction: "pan-y",
       }}
       onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
       {/* Silhouette dinamico moto/auto */}
