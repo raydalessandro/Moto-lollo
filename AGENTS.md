@@ -44,17 +44,25 @@ npm install
 npm run dev               # dev server
 npm run typecheck         # tsc --noEmit (DEVE passare prima di push)
 npm run build             # production build (DEVE passare prima di push)
+npm run test              # vitest run (DEVE passare prima di push)
+npm run test:watch        # vitest watch mode
+npm run test:coverage     # v8 coverage report
 npm run lint              # eslint
 
-# Git
+# Git — workflow branch + PR (attivo dalla Fase A turn-by-turn)
 git status                # SEMPRE prima di committare
 git diff                  # rivedi le modifiche prima di committare
 git log --oneline -10     # contesto recente
 
-git add <file>            # mai `git add -A` se non hai verificato git status
+git checkout -b feat/<name>     # nuova branch
+git add <file>                  # mai `git add -A` se non hai verificato git status
 git commit -m "tipo(area): messaggio"
-git push origin main      # diretto su main in Fase 0
+git push -u origin feat/<name>  # push branch
+# poi: apri PR via mcp__github__create_pull_request (draft se WIP)
+# Ray valida su Preview Vercel → squash merge → sync main → cancella branch
 ```
+
+**Niente più push diretti su `main`**: tutto via PR + squash merge.
 
 ---
 
@@ -157,11 +165,13 @@ Vai diretto: leggi → modifica → typecheck → commit → push.
 
 ## MCP tools disponibili
 
-Quando GitHub HTTP push non funziona (raro), usa `mcp__github__*`:
+GitHub MCP per branch/PR (workflow attivo):
 
-- `push_files` per batch commit multi-file
-- `create_or_update_file` per single file con SHA
-- `delete_file` per cancellare
+- `mcp__github__create_pull_request` — apre PR (draft per WIP)
+- `mcp__github__update_pull_request` — toglie draft prima del merge
+- `mcp__github__merge_pull_request` — squash merge
+- `mcp__github__push_files` per batch commit multi-file (raramente serve)
+- `mcp__github__create_or_update_file` per single file con SHA
 
 Quando si avvia Fase 1, useremo anche **Supabase MCP** (configurazione futura) per database migrations + RLS testing.
 
@@ -187,11 +197,13 @@ Quando si avvia Fase 1, useremo anche **Supabase MCP** (configurazione futura) p
 ## Pattern di errore comuni da evitare
 
 1. **Commit "tipo" mancante**: `git commit -m "stuff"` → no. Sempre `feat(area): ...`.
-2. **Push senza typecheck**: scotta. Sempre `npm run typecheck` prima.
-3. **Aggiungere CLAUDE.md mid-session**: questo file è AGENTS.md, non duplicare.
-4. **Toccare file legacy `docs/sources/*`**: sono immutabili. Modifica `docs/sources/README.md` se serve aggiornare il mapping.
-5. **Modificare il mock DB per fixare la UI**: se la UI ha un bug, sistema il componente, non il seed.
-6. **Spec out-of-date**: se modifichi una mutation senza aggiornare la spec → debito. Spec e codice si muovono insieme.
+2. **Push senza typecheck + test**: scotta. Sempre `npm run typecheck && npm run test` prima.
+3. **Push diretto su `main`**: vietato dopo Fase A turn-by-turn. Sempre branch + PR.
+4. **Aggiungere CLAUDE.md mid-session**: questo file è AGENTS.md, non duplicare.
+5. **Toccare file legacy `docs/sources/*`**: sono immutabili. Modifica `docs/sources/README.md` se serve aggiornare il mapping.
+6. **Modificare il mock DB per fixare la UI**: se la UI ha un bug, sistema il componente, non il seed.
+7. **Spec out-of-date**: se modifichi una mutation senza aggiornare la spec → debito. Spec e codice si muovono insieme.
+8. **Bug senza regression test**: ogni bug che richiede un fix in `lib/navigation.ts`, `lib/voice.ts` o futuro `lib/*` testabile → scrivere prima il test che riproduce il bug, poi fixare.
 
 ---
 

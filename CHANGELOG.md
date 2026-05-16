@@ -8,13 +8,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Versioning [Se
 
 ## [Unreleased]
 
-### Aggiunto
-- **NavigationOverlay — Fase A turn-by-turn**: navigazione con search destinazione, geocoding debounced (300ms, proximity-aware), preview route con km/durata, bottoni Avvia/Cambia. Lo state machine `search → preview → navigating` sostituisce il vecchio prop `destination: string` (NavMode `navigation` ora senza payload). Le Fasi B/C/D (step progression, voce, reroute, arrivo) restano da fare.
+### Turn-by-turn navigation (4 fasi)
+
+- **Fase A** (merged): search destinazione + geocoding debounced (300ms, proximity-aware) + preview card con km/durata + bottoni Avvia/Cambia. State machine `search → preview → navigating` sostituisce il vecchio prop `destination: string` (NavMode `navigation` senza payload).
+- **Fase B** (PR #6): **step progression engine** in nuovo `src/lib/navigation.ts`. Algoritmo proximity matching su finestra `[prev-1, prev+3]`. `DirectionsStep` esteso con `type`/`wayPoints`/`name`, `DirectionsRoute` con `coordinates` decodate. Banner maneuver con icona dinamica (left/right/sharp/U-turn/...) e `metersToManeuver` reale. HUD navigazione: fatti / rimanenti / arrivo (HH:MM).
+- **Fase C** (PR #6): nuovo `src/lib/voice.ts` con Web Speech API italiana. Voice cue "Tra 200 metri, X" a 250-60m (solo step > 250m, no depart) e "X" a <60m, anti-doppione via Set di key `s{idx}-far/near`. Toggle voce on/off. **Reroute automatico**: dopo 5s consecutivi off-route (>50m dal route) richiama `getDirections` con nuovo origin GPS → sostituisce route e resetta annunci. `ReroutingIndicator` pillola "Ricalcolo percorso…" durante fetch.
+- **Fase D** (PR #6): arrival detection (<30m destinazione per >3s consecutivi) + `ArrivalSummary` card (placeName + km/durata/media + Chiudi). Voice cue "Sei arrivato a destinazione". Maneuver banner + voice toggle nascosti dopo arrivo.
+
+### Test suite
+- Vitest installato (devDeps): `vitest`, `@vitest/coverage-v8`, `jsdom`.
+- Scripts: `npm test`, `npm run test:watch`, `npm run test:coverage`.
+- `src/lib/__tests__/navigation.test.ts` — 22 test su `computeNavProgress` (empty/start/mid/end/off-route/lookback/no-jump/remaining/zero-length-step), formattatori (`formatDistance`/`formatDuration`/`formatEta` con fake timers), `maneuverIconPath`. Coverage 99%.
+- `src/lib/__tests__/voice.test.ts` — 7 test su `isVoiceAvailable`/`speak`/`cancelSpeech` con stub di `window.speechSynthesis`. Coverage 95%.
+- **29/29 test verdi**. Convenzione: ogni bug emerso da road test → regression test in `*.test.ts` prima di fixare.
+
+### Cleanup
+- Debug HUD on-screen rimosso da `MapView.tsx` (motore stabile, niente più rolling log overlay). Errori critici rimangono in `console.warn`.
 
 ### Issue noti da sistemare
-- **Geocoding ORS — indirizzi italiani**: il backend Pelias di OpenRouteService non trova certi indirizzi specifici (es: "Via XXV Aprile, Cesano Boscone" — sia "XXV" che "25" falliscono). Da indagare: provider alternativo per il geocoding (Nominatim OSM, Photon), oppure pre-processing dei numeri romani lato client, oppure fallback su seconda API quando ORS non trova nulla.
+- **Geocoding ORS — indirizzi italiani**: Pelias non trova certi indirizzi specifici (es: "Via XXV Aprile, Cesano Boscone" — sia "XXV" che "25" falliscono). Da indagare: provider alternativo (Nominatim OSM, Photon), pre-processing numeri romani client-side, o fallback dopo zero risultati ORS.
 
-### Aggiunto
+### Aggiunto (precedente)
 - **Stack mappe open-source completa** (in sostituzione di Mapbox dopo problemi inspiegabili lato account):
   - Dipendenza `maplibre-gl` (al posto di `mapbox-gl` + types)
   - Tile rendering: [MapLibre GL JS](https://maplibre.org/) + [OpenFreeMap](https://openfreemap.org/) — zero signup, tile illimitate

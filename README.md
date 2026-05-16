@@ -6,7 +6,9 @@ App per motociclisti: pianificazione, registrazione uscite, cordate live di grup
 
 ## Stato
 
-**Fase 0 (chiusura spec)** — Frontend prototype completo, in-memory mock data, deployato su Vercel. Spec back-end scritta e pronta. Prossimo: Fase 1 — wirare Supabase, autenticazione, tracking GPS reale.
+**Turn-by-turn navigation completa, in attesa di road test.** Frontend prototype + mappa interattiva MapLibre + GPS reale + Wake Lock + turn-by-turn ORS con voce italiana + reroute automatico + arrival detection. PR #6 aperta con Fasi B+C+D + test suite Vitest (29/29 verdi, motore di navigazione 99% cov).
+
+Prossimo dopo road test: merge PR #6 → **Fase 1 — MVP "IO solo"** (Supabase setup, auth, persistence delle uscite, PWA manifest).
 
 Vedi [`HANDOFF.md`](./HANDOFF.md) per il punto di apertura sessione e [`docs/ROADMAP.md`](./docs/ROADMAP.md) per le fasi.
 
@@ -34,6 +36,9 @@ npm run dev            # http://localhost:3000
 npm run build          # production build
 npm run typecheck      # tsc --noEmit
 npm run lint           # eslint
+npm test               # vitest run (29 test sul motore di nav + voce)
+npm run test:watch     # vitest watch mode
+npm run test:coverage  # v8 coverage report
 ```
 
 L'app è pensata per viewport mobile (max-width 768). Apri dev tools in modalità mobile per esperienza realistica.
@@ -79,6 +84,12 @@ Su Vercel: Settings → Environment Variables → aggiungi `NEXT_PUBLIC_ORS_TOKE
 │   ├── types/
 │   │   └── domain.ts           # Single source of truth dei tipi
 │   └── lib/                    # Utilities
+│       ├── maps.ts             # MapLibre + OpenFreeMap + ORS helpers
+│       ├── geolocation.ts      # useGeolocation hook + haversine
+│       ├── wake-lock.ts        # useWakeLock hook
+│       ├── navigation.ts       # step progression engine (turn-by-turn)
+│       ├── voice.ts            # speech synthesis layer
+│       └── __tests__/          # Vitest test suite
 │
 ├── docs/
 │   ├── PLAN.md                 # Refactor history (Step 1-15 chiusi)
@@ -116,16 +127,17 @@ Letti **in quest'ordine** per orientarsi:
 
 ---
 
-## Architettura UI: 3 pillars
+## Architettura UI: 2 pillars
 
-L'app è organizzata in 3 pillars mutuamente esclusivi nella bottom nav:
+L'app è organizzata in 2 pillars mutuamente esclusivi nella bottom nav:
 
-- **IO** (personale, accent `#ff6a1f`) — Home · Mappa · Registra · Garage
+- **IO** (personale, accent `#ff6a1f`) — Home · Mappa · Feed · Garage
 - **GRUPPO** (accent = colore del gruppo attivo) — Gruppo · Pianifica · Cordata · Storia · Diario
-- **MONDO** (community, accent `#6bb0ff`) — Feed · Eventi · Classifica
+
+Toggle IO↔GRUPPO è una pillola compatta nell'Header (no più switcher in bottom nav).
 
 Più zone fuori bottom nav:
-- **Drawer hamburger** (top-left): Profilo, Impostazioni, Privacy
+- **Drawer hamburger** (top-left): Profilo · Eventi · Classifica · Impostazioni · Privacy
 - **Fullscreen overlay** (on-demand): Navigation/Tracking/Cordata live
 
 Dettagli completi in [`docs/spec/00_overview.md`](./docs/spec/00_overview.md).
@@ -146,9 +158,19 @@ Conventional Commits. Tipi usati:
 
 `area` è uno di: `nav`, `io`, `gruppo`, `mondo`, `profilo`, `mocks`, `shell`, `docs`, `spec`, `ui`.
 
-### Branch
+### Branch + PR
 
-`main` è la branch di lavoro. **Push diretti su `main`** sono ok in Fase 0 (siamo in 1 + Claude). Quando ci uniranno altri sviluppatori, valuteremo branch protection.
+Workflow attivo dalla Fase A turn-by-turn in poi:
+
+```bash
+git checkout -b feat/<name>
+# ...lavoro...
+npm run typecheck && npm run test && npm run build
+git push -u origin feat/<name>
+# Apri PR (draft se WIP) → Ray valida su Preview Vercel → squash merge → cancella branch
+```
+
+Niente più push diretti su `main`.
 
 ### Codice
 
