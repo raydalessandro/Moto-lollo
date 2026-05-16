@@ -2,7 +2,7 @@
 
 Piano di costruzione dell'app reale, organizzato per fasi. Auto-sufficiente: se una chat si chiude, basta rileggere questo file + `docs/PLAN.md` + `docs/spec/` per ripartire.
 
-**Ultimo aggiornamento:** 2026-05-14.
+**Ultimo aggiornamento:** 2026-05-16.
 
 ---
 
@@ -28,7 +28,7 @@ Tutto va scritto pensando che un domani Flutter chiamerà gli stessi endpoint:
 - **API**: Supabase REST + RPC functions — Flutter ha SDK identico.
 - **Tipi domain**: già unificati in `src/types/domain.ts` (mirror PostgreSQL → TypeScript). Flutter avrà file equivalenti generati dallo schema.
 - **NIENTE** Next.js Server Actions, NIENTE getServerSideProps logic-heavy. Il front è una SPA stateless che chiama API.
-- **Mapbox**: stesso token cross-platform, stessi tile, stessi endpoint REST.
+- **Mappe**: MapLibre + OpenRouteService — Flutter ha plugin equivalenti (`maplibre_gl`), API REST ORS identica.
 
 ### Stack scelto
 
@@ -40,7 +40,7 @@ Tutto va scritto pensando che un domani Flutter chiamerà gli stessi endpoint:
 | DB | Supabase (Postgres + RLS) | RLS per ogni tabella, niente API custom prima di averne bisogno |
 | Storage | Supabase Storage | foto attività, avatar |
 | Realtime | Supabase Realtime | per cordata (fase 4) |
-| Mappe | Mapbox GL JS + Mapbox APIs | tile + directions + geocoding |
+| Mappe | MapLibre GL JS + OpenFreeMap + OpenRouteService | tile gratis illimitate + directions/geocoding 2k/1k al giorno. Switch da Mapbox dopo problemi account. |
 | Deploy | Vercel | main → prod |
 | Monitoring | (vedere fase 6) | Sentry per errori, posthog/plausible per analytics |
 
@@ -64,7 +64,7 @@ Stima totale a sentimento: **4-6 mesi** se ci si lavora con costanza ma non a te
 
 ---
 
-## Fase 0 — Spec + decisioni *(in corso)*
+## Fase 0 — Spec + decisioni *(chiusa, in iterazione UI verso Fase 1)*
 
 **Obiettivo:** chiudere tutta la spec scritta prima di toccare il backend, così non si "improvvisa" durante l'implementazione.
 
@@ -73,13 +73,19 @@ Stima totale a sentimento: **4-6 mesi** se ci si lavora con costanza ma non a te
 - [x] `docs/spec/` foundation: README + overview + domain model + E2E flows
 - [x] Cleanup repo (dead code, INCONSISTENCIES.md archiviato, docs/sources/README.md)
 - [x] `docs/ROADMAP.md` (questo file)
-- [ ] `docs/spec/` per-screen: 15 file (IO×4, GRUPPO×6, MONDO×3, drawer, navigation)
-- [ ] `docs/spec/80_backend_design.md` — disegno schema Postgres + RLS policies + Mapbox setup
-- [ ] Mappare quali file del vecchio bundle `docs/sources/spec_bundle.zip` restano canonici per il back (es. `04_tracking/*`, `05_sync/*`, `09_safety/*`)
+- [x] `docs/spec/` per-screen: 15 file (IO×4, GRUPPO×6, MONDO×3, drawer, navigation)
+- [x] `docs/spec/80_backend_design.md` — schema Postgres + RLS policies + setup
+- [x] Mappare file canonici da `docs/sources/spec_bundle.zip` per il back
 
-**Output di fine fase:** un backend designer (umano o AI) può leggere `docs/spec/` + `docs/sources/spec_bundle.zip` e costruire schema + endpoint senza fare domande di interpretazione.
+**Iterazione UI / pre-Fase 1 (in corso):**
+- [x] IA passa da 3 pillar a 2 pillar (MONDO sciolto, Feed in IO, Eventi/Classifica nel drawer)
+- [x] Stack mappe MapLibre + OpenFreeMap + ORS attiva e funzionante
+- [x] Navigazione Fasi A+B: search destinazione, route preview, step progression con banner dinamico
+- [x] Garage redesign a dashboard 2×2 + vehicle switcher (moto+auto) via swipe/picker
+- [x] Mappa redesign a grid quadrato di card con mini-mappa + filtri stratificati
+- [ ] Navigazione Fasi C+D: voce TTS + arrivo (in PR #6, da testare in macchina)
 
-**Effort:** 3-5 giorni di scrittura.
+**Effort residuo prima di Fase 1:** validare voce/arrivo + 1-2 uscite reali tracciate.
 
 ---
 
@@ -111,11 +117,11 @@ Storage buckets: `avatars/`, `motorcycle-photos/`, `activity-media/`.
 
 - **Auth screens** (signup, login, password reset, magic link). 4 schermate, nuove.
 - **PWA wrapper**: `manifest.webmanifest`, service worker per app shell cache, icone, splash.
-- **Mapbox integrato veramente**:
-  - Editor mappa per "Crea un percorso" (tap = waypoint)
-  - Tracking GPS reale via `geolocation.watchPosition` + Wake Lock
-  - Navigation turn-by-turn (Mapbox Directions API)
-  - GPX import parser
+- **Stack mappe — già attiva**, da estendere:
+  - Editor mappa per "Crea un percorso" (tap = waypoint) — TODO
+  - Tracking GPS reale via `geolocation.watchPosition` + Wake Lock — **fatto**
+  - Navigation turn-by-turn (ORS Directions + step progression + voce + arrivo) — **Fasi A+B fatte, C+D in PR**
+  - GPX import parser — TODO
 - **Schermate da wirare a Supabase**: HomeScreen, MappaScreen (archivio), RegistraScreen (4 modi tutti veri), GarageScreen + sub-screens (manutenzione, documenti), ProfiloScreen + Impostazioni + Privacy.
 - **Drawer Notifiche** funzionante (Supabase Realtime su `notifications` table).
 - **Hide gruppi e mondo**: BottomNav mostra solo IO. Hamburger drawer funziona.
@@ -251,7 +257,7 @@ RLS più articolato (vedi `docs/spec/70_flussi_e2e.md` §"Authorization matrix")
 - Sentry per errori frontend + log strutturati lato Supabase Functions
 - PostHog o Plausible per analytics base (DAU, retention, principali eventi)
 - A/B test sulla onboarding (eventualmente)
-- Performance audit (Lighthouse, bundle size, Mapbox tile cache)
+- Performance audit (Lighthouse, bundle size, MapLibre tile cache)
 - **Decisione Flutter rewrite:** valutare costi/benefici dopo 6-12 mesi di PWA in uso reale. Se la base utenti cresce e i limiti background diventano insostenibili (cordata seria, navigation con telefono in tasca), si comincia il porting. Altrimenti si tiene PWA.
 
 **Effort:** 2 settimane di stabilizzazione + decisione separata sul porting.
@@ -301,4 +307,4 @@ Quando una chat si chiude e ne aprite una nuova, basta dire:
 
 E si riparte da qui. Lo stato "siamo in fase X" lo aggiorniamo in cima a questo file.
 
-**Stato attuale: Fase 0 — chiusura spec + decisioni.**
+**Stato attuale: Fase 0 chiusa. Iterazione UI + navigazione in corso, in transizione verso Fase 1 (Supabase + auth + persistence).** Vedi `HANDOFF.md` per i dettagli operativi.

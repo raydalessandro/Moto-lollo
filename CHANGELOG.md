@@ -9,7 +9,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/it/1.1.0/). Versioning [Se
 ## [Unreleased]
 
 ### Aggiunto
-- **NavigationOverlay — Fase A turn-by-turn**: navigazione con search destinazione, geocoding debounced (300ms, proximity-aware), preview route con km/durata, bottoni Avvia/Cambia. Lo state machine `search → preview → navigating` sostituisce il vecchio prop `destination: string` (NavMode `navigation` ora senza payload). Le Fasi B/C/D (step progression, voce, reroute, arrivo) restano da fare.
+- **Garage redesign — dashboard a colpo d'occhio** (PR #7):
+  - Hero card del veicolo primario con silhouette in ember/8%, nome italiano «...» tra virgolette, year/cc/colore, km totali in display.
+  - Grid 2×2 status card cliccabili (Pagamenti / Controlli / Documenti / Storico) con stato verde/giallo/rosso a colpo d'occhio + primary label dinamico (es. "Bollo tra 18g").
+  - `GarageDetailModal` fullscreen on-tap con lista entries per categoria. Read-only per ora (bottoni + sono placeholder per persistence Fase 1).
+- **Vehicle switcher dentro l'hero del Garage** (PR #7):
+  - Swipe orizzontale ←/→ sull'hero cicla i veicoli (prev/next).
+  - Tap su `«Nome» ▾` apre `VehiclePickerOverlay` — bottom-sheet slide-down stesso pattern di `GroupPickerOverlay`.
+  - Dots paginati in basso-dx mostrano "veicolo N di M".
+  - Rimossa lista "Altre moto" in fondo (tutto integrato nell'hero).
+- **Auto come prima cittadina** (PR #7):
+  - Aggiunto campo opzionale `kind: "moto" | "auto"` su `Motorcycle` (default moto per backwards-compat).
+  - Silhouette dell'hero, label header e unit cc/cm³ adattano in base al kind.
+  - m3 di Ray trasformato in Alfa Romeo Giulia Veloce 2021 per testare il caso quattro ruote.
+- **Mappa redesign — card quadrate + filtri stratificati** (PR #7):
+  - Grid 2-col aspect-square al posto della lista verticale; mini-mappa visibile in ogni card.
+  - Nomi generi più espliciti: "Creati" → "Disegnati", "Caricati" → "Importati", "Fatti" → "Tracciati", Salvati invariato.
+  - Eyebrow "▸ Percorsi" (label nav resta "Mappa" per non rompere paths).
+  - Toggle "anche auto" inline sempre visibile (placeholder finché i route mock non hanno campo vehicle).
+  - Tabs sorgente sempre in alto + bottone "▸ Filtri" che espande pannello con: 8 tag più frequenti come chip multi-select (OR), ordinamento recenti/più lunghi, badge "N attivi", azzera.
+  - MiniMap v2: viewBox 100×100 fill con glow ember + griglia decorativa.
+- **NavigationOverlay — Fase B step progression**: engine in `src/lib/navigation.ts` che ad ogni GPS fix calcola lo step corrente, distanza al prossimo turn, ETA, distanza rimanente. Banner step dinamico in NavigationOverlay con icona maneuver + testo istruzione + distanza al turn. Auto-advance allo step successivo entro 25m.
+- **NavigationOverlay — Fase A turn-by-turn**: navigazione con search destinazione, geocoding debounced (300ms, proximity-aware), preview route con km/durata, bottoni Avvia/Cambia. Lo state machine `search → preview → navigating` sostituisce il vecchio prop `destination: string` (NavMode `navigation` ora senza payload).
 
 ### Issue noti da sistemare
 - **Geocoding ORS — indirizzi italiani**: il backend Pelias di OpenRouteService non trova certi indirizzi specifici (es: "Via XXV Aprile, Cesano Boscone" — sia "XXV" che "25" falliscono). Da indagare: provider alternativo per il geocoding (Nominatim OSM, Photon), oppure pre-processing dei numeri romani lato client, oppure fallback su seconda API quando ORS non trova nulla.
