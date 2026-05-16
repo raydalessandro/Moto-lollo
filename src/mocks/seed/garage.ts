@@ -10,6 +10,7 @@ import { NOW } from "./people";
 interface BikeSeed {
   id: UUID;
   ownerId: UUID;
+  kind?: "moto" | "auto";
   brand: string;
   model: string;
   name: string;
@@ -21,10 +22,10 @@ interface BikeSeed {
 }
 
 const BIKES: BikeSeed[] = [
-  // Ray
+  // Ray (moto + 1 auto, per testare anche il caso quattro ruote)
   { id: "m1",    ownerId: "u0",        brand: "Ducati",   model: "Panigale V4 S",         name: "Panigale",   year: 2022, engineCc: 1103, color: "Rosso Ducati",   totalKm: 12840, isPrimary: true  },
   { id: "m2",    ownerId: "u0",        brand: "Honda",    model: "Africa Twin Adv Sports", name: "Africa",    year: 2020, engineCc: 1084, color: "Tricolore",       totalKm: 34210, isPrimary: false },
-  { id: "m3",    ownerId: "u0",        brand: "Vespa",    model: "GTS 300 HPE",            name: "Vespino",   year: 2024, engineCc: 278,  color: "Grigio titanio",  totalKm:  1920, isPrimary: false },
+  { id: "m3",    ownerId: "u0", kind: "auto", brand: "Alfa Romeo", model: "Giulia Veloce", name: "Giulia",  year: 2021, engineCc: 1995, color: "Rosso Alfa",     totalKm: 38450, isPrimary: false },
   // Altri rider — 1 moto primaria a testa
   { id: "b_mar", ownerId: "u_marco",   brand: "Ducati",   model: "Panigale V4 S",         name: "V4S",        year: 2023, engineCc: 1103, color: "Rosso",           totalKm:  8100, isPrimary: true  },
   { id: "b_giu", ownerId: "u_giulia",  brand: "Yamaha",   model: "MT-09 SP",              name: "MT",         year: 2022, engineCc:  889, color: "Icon blu",        totalKm: 14300, isPrimary: true  },
@@ -50,6 +51,7 @@ export function seedMotorcycles(): Record<UUID, Motorcycle> {
     out[b.id] = {
       id: b.id,
       ownerId: b.ownerId,
+      kind: b.kind,
       name: b.name,
       brand: b.brand,
       model: b.model,

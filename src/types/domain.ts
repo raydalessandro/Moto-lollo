@@ -52,6 +52,8 @@ export interface UserPreferences {
 export interface Motorcycle {
   id: UUID;
   ownerId: UUID;
+  /** "moto" è il default storico; "auto" per veicoli a quattro ruote. */
+  kind?: "moto" | "auto";
   name: string;
   brand: string;
   model: string;
