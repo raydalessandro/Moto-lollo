@@ -4,62 +4,77 @@
 
 ---
 
-## Stato (2026-05-14)
+## Stato (2026-05-16)
 
-**Fase 0 chiusa + iterazione IA UI in corso.** Frontend prototype completo, spec v2 scritta, repo agent-ready. Recente iterazione UI: passaggio da 3 pillar a 2 pillar (vedi CHANGELOG).
+**Fase 0 chiusa. Iterazione UI + navigation in corso, in transizione verso Fase 1.**
 
 - Build verde su `main`
-- Deploy Vercel attivo
-- Tutta la documentazione strategica + spec per-screen + backend design **già scritte**
-- Backend NON ancora implementato — è il prossimo passo
+- Deploy Vercel attivo + Preview su PR
+- Stack mappe **attiva e funzionante** (MapLibre + OpenFreeMap + OpenRouteService)
+- Navigazione **Fasi A+B mergiate**: geocoding destinazione + route preview + step progression con banner turn-by-turn dinamico
+- UI sweep mergiata (PR #7): Garage dashboard, vehicle switcher (moto+auto), Mappa redesign
 
 **Architettura UI corrente:**
 - **2 pillar**: IO (Home · Mappa · Feed · Garage) + GRUPPO (Gruppo · Pianifica · Cordata · Storia · Diario)
-- **Toggle IO↔GRUPPO** nell'Header (pillola compatta, no più striscia in bottom nav)
+- **Toggle IO↔GRUPPO** nell'Header (pillola compatta)
 - **Drawer hamburger**: Profilo · Eventi · Classifica · Impostazioni · Privacy
 
 ---
 
-## Prossimo passo: **completare la navigazione** + ottenere chiave OpenRouteService
+## In corso / aperto
 
-Stack mappe ora attiva:
-- **Tile**: MapLibre GL JS + OpenFreeMap (zero signup, funziona già)
-- **Geocoding + Directions**: OpenRouteService (richiede API key gratuita)
-- File: `src/lib/maps.ts`, `src/lib/wake-lock.ts`, `src/lib/geolocation.ts`
-- Componenti: `src/components/map/MapView.tsx` + `StaticMap.tsx`
-- Wiring già fatto in `NavigationOverlay.tsx`
+### PR #6 — `feat/turn-by-turn-c` (da testare e mergiare)
 
-**In attesa:** Ray fornisce l'API key ORS. Setup:
-1. Signup gratuito su [openrouteservice.org/dev/#/signup](https://openrouteservice.org/dev/#/signup)
-2. Dashboard → "Tokens" → "Create new token" → copia
-3. Su Vercel: Settings → Environment Variables → aggiungi `NEXT_PUBLIC_ORS_TOKEN`
-4. Redeploy → modalità "Naviga" attiva con search destinazione + turn-by-turn
+Fasi C+D della navigazione:
+- **Voce TTS** (`src/lib/voice.ts`) — Web Speech API, italiano, distanze quantizzate, anti-doppia annunci, mute/unmute
+- **Arrivo** — overlay quando entri in raggio di 30m dalla destinazione, summary + CTA "Chiudi"
+- **Viste preview/navigating** rifinite — banner step compatto in alto, hint "tra Xm" in cima alla mappa
+- Tests (Vitest) + doc CHANGELOG/HANDOFF aggiornati sulla branch (non ancora su main)
 
-**Senza ORS key:** tile e GPS funzionano comunque (utile per la modalità "Registra mentre guidi").
+**Da fare quando torna Ray:**
+1. Aprire Preview Vercel della PR #6
+2. Testare voce **in macchina** (richiede gesture utente per Speech API + audio jack/Bluetooth)
+3. Verificare summary di arrivo a destinazione raggiunta
+4. Se OK → squash merge su main
+
+### Issue noti
+
+- **Geocoding ORS — indirizzi italiani**: Pelias non trova certi indirizzi (es. "Via XXV Aprile, Cesano Boscone"). Workaround pendente: provider alternativo (Nominatim/Photon) o pre-processing numeri romani lato client.
+
+---
+
+## Prossimo passo dopo PR #6
+
+**Checkpoint deciso con Ray:** il pillar GRUPPO aspetta percorsi tracciati veri. Senza attività registrate dalla navigazione, il Gruppo è pagina vuota.
+
+Ordine:
+1. **PR #6 mergiata** (voce + arrivo)
+2. **1-2 uscite reali** registrate da Ray usando la navigazione completa
+3. **Allora** UI del pillar GRUPPO, usando quei percorsi come content reale per Cordata/Pianifica/Storia
+
+---
+
+## Setup ORS (già fatto)
+
+API key OpenRouteService configurata su Vercel (Production + Preview) come `NEXT_PUBLIC_ORS_TOKEN`. Tile MapLibre + GPS funzionano sempre indipendentemente dal token.
+
+Se l'account Mapbox di Ray un giorno si sblocca (vedi "Storia" sotto), il porting MapLibre → Mapbox richiede ~30 min: API quasi identiche.
 
 ### Storia: perché non Mapbox
 
-Inizialmente avevamo integrato Mapbox GL JS. L'account Mapbox di Ray ha presentato anomalie inspiegabili (tutte le richieste ai default style ufficiali rispondevano "Style not found") nonostante token valido, email verificata, account in ordine. Dopo ~2 ore di debug abbiamo deciso di switchare allo stack alternativo open-source. Riferimenti API praticamente identiche: se l'account Mapbox in futuro si sblocca, possiamo tornare a Mapbox in 30 minuti (MapLibre legge anche le tile Mapbox).
+Inizialmente integrato Mapbox GL JS. L'account Mapbox di Ray ha presentato anomalie inspiegabili (tutte le richieste ai default style ufficiali rispondevano "Style not found") nonostante token valido. Dopo ~2 ore di debug, switch a stack open-source. MapLibre legge anche tile Mapbox: se l'account si sblocca, torno con poco lavoro.
 
-### Step successivi (dopo Mapbox)
+---
 
-1. **Mapbox tile + geocoding** (in corso): vedi mappe reali in NavigationOverlay
-2. **GPS reale + Wake Lock + Directions**: tracking foreground + turn-by-turn
-3. **Supabase auth-only**: login vero, sessione propria
-4. **Activity persistence**: le uscite si salvano
-5. **Resto Fase 1**: garage, manutenzione, notifiche, storage media
-
-Vedi `docs/ROADMAP.md` per il dettaglio.
-
-## Fase 1 strict (post Mapbox): MVP "IO solo"
+## Fase 1 strict: MVP "IO solo"
 
 Obiettivo: app installabile come PWA, con login Supabase, in cui Ray + 4-5 amici motociclisti possono:
-1. Registrare uscite GPS (tracking foreground con Wake Lock)
-2. Navigare verso una destinazione (Mapbox turn-by-turn)
-3. Vedere archivio percorsi personali
-4. Gestire moto + manutenzione + documenti
+1. Registrare uscite GPS (tracking foreground con Wake Lock) ← **infrastruttura già pronta**
+2. Navigare verso una destinazione (turn-by-turn ORS) ← **Fasi A+B mergiate, C+D in PR #6**
+3. Vedere archivio percorsi personali ← **UI pronta, da agganciare a Supabase**
+4. Gestire moto + manutenzione + documenti ← **UI Garage pronta (PR #7), da agganciare a Supabase**
 
-Pillar GRUPPO e MONDO **disabilitati/nascosti** in Fase 1.
+Pillar GRUPPO e drawer Eventi/Classifica **disabilitati/nascosti** in Fase 1.
 
 Step 1 di Fase 1 = **Schema migration 001 (auth + profile + preferences)** + setup Supabase project.
 
@@ -74,7 +89,7 @@ In ordine, ~10 minuti:
 1. **Questo file** ✓ già letto
 2. [`docs/ROADMAP.md`](./docs/ROADMAP.md) — le 6 fasi
 3. [`CHANGELOG.md`](./CHANGELOG.md) — cosa è cambiato di recente
-4. [`docs/spec/80_backend_design.md`](./docs/spec/80_backend_design.md) — schema, RLS, Mapbox setup
+4. [`docs/spec/80_backend_design.md`](./docs/spec/80_backend_design.md) — schema, RLS, setup
 5. [`AGENTS.md`](./AGENTS.md) — convenzioni operative
 
 Per task specifici a una schermata, leggi anche `docs/spec/<num>_*.md`.
@@ -93,13 +108,26 @@ npm run typecheck              # build verde?
 
 ---
 
+## Workflow git corrente
+
+Da quando lavoriamo con review + Preview Vercel:
+- Feature work su branch `feat/<area-cosa>` o `fix/<area-cosa>`
+- PR via `mcp__github__create_pull_request` (draft → ready quando build verde)
+- Squash merge su `main` quando Ray approva su Preview
+- `main` deploy automatico su Vercel
+
+Non più push diretti su `main`.
+
+---
+
 ## Decisioni di prodotto già prese (non rinegoziare senza Ray)
 
 - **Stack back**: Supabase (Postgres + RLS + Auth + Storage + Realtime)
 - **Target deploy ora**: PWA via Vercel. **Flutter** è target finale ma a 1-2 anni.
-- **Tracking GPS**: foreground only via Wake Lock. Accettabile per testers iniziali (Ray + 4-5 amici).
-- **No Capacitor**: troppi passaggi per testare (Apple Dev account, TestFlight, sideload APK). PWA è abbastanza.
+- **Tracking GPS**: foreground only via Wake Lock. Accettabile per testers iniziali.
+- **No Capacitor**: troppi passaggi per testare. PWA è abbastanza.
 - **Niente push notifications native** in MVP (iOS PWA limitato). Solo in-app bell.
+- **Veicoli polimorfici**: `Motorcycle` ora ha campo opzionale `kind: "moto" | "auto"`. Type name resta `Motorcycle` per non fare rename a tappeto.
 
 ---
 
@@ -116,17 +144,17 @@ Vedi `docs/spec/80_backend_design.md` §15 "Domande aperte critiche":
 
 ## Promemoria operativi
 
-- `main` push diretti ok (Fase 0, siamo in 1+Claude). Quando ci uniranno altri, valutare branch protection.
 - Commit conventional: `tipo(area): messaggio`. Vedi `AGENTS.md`.
 - Build verde è **non-negoziabile** prima di push: `npm run typecheck` + `npm run build`.
-- Spec out-of-date = debito tecnico. Aggiorna `docs/spec/*` quando aggiungi codice.
+- Lint: errori solo nei propri file vanno fixati. Errori pre-esistenti in altri file = non bloccanti.
+- Spec out-of-date = debito tecnico. Aggiorna `docs/spec/*` quando aggiungi codice (post-Fase 1).
 
 ---
 
 ## Quando aggiornare questo file
 
 Aggiornare `HANDOFF.md` ogni volta che:
-- Cambia lo stato corrente (es. chiudi una fase, apri un task lungo)
+- Cambia lo stato corrente (es. chiudi una fase, mergi una PR rilevante)
 - Cambia il "prossimo passo"
 - Si chiude un milestone (allinea anche `CHANGELOG.md`)
 

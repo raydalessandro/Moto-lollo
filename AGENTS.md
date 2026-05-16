@@ -53,7 +53,8 @@ git log --oneline -10     # contesto recente
 
 git add <file>            # mai `git add -A` se non hai verificato git status
 git commit -m "tipo(area): messaggio"
-git push origin main      # diretto su main in Fase 0
+git checkout -b feat/<area-cosa>          # feature branch
+git push -u origin feat/<area-cosa>       # poi apri PR via mcp__github__create_pull_request
 ```
 
 ---
@@ -214,4 +215,19 @@ Quando una chat si chiude:
 
 ## Versione corrente
 
-`0.1.0` — Fase 0 chiusa (vedi `CHANGELOG.md`).
+`0.1.0` — Fase 0 chiusa, iterazione UI + navigazione in corso (vedi `CHANGELOG.md` [Unreleased] e `HANDOFF.md`).
+
+---
+
+## Workflow PR corrente
+
+Da quando lavoriamo con Preview Vercel + review:
+
+1. `git checkout -b feat/<area-cosa>` da `main` sync
+2. Commit atomici → `git push -u origin feat/<area-cosa>`
+3. `mcp__github__create_pull_request` con title `feat(area): ...`, body con sezioni Summary/Test plan/Conflitti, `draft: true`
+4. Quando build verde + Preview ok → `mcp__github__update_pull_request` con `draft: false`
+5. Ray testa su Preview; quando approva → `mcp__github__merge_pull_request` con `merge_method: "squash"`
+6. `git checkout main && git pull && git branch -d feat/<area-cosa>` per pulire locale
+
+Niente push diretti su `main`.

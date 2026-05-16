@@ -6,7 +6,7 @@ App per motociclisti: pianificazione, registrazione uscite, cordate live di grup
 
 ## Stato
 
-**Fase 0 (chiusura spec)** — Frontend prototype completo, in-memory mock data, deployato su Vercel. Spec back-end scritta e pronta. Prossimo: Fase 1 — wirare Supabase, autenticazione, tracking GPS reale.
+**Fase 0 chiusa. Iterazione UI + navigazione in corso, in transizione verso Fase 1.** Frontend prototype completo, in-memory mock data, deploy Vercel + Preview su PR. Stack mappe (MapLibre + OpenFreeMap + OpenRouteService) attiva e funzionante. Navigazione turn-by-turn Fasi A+B mergiate; Fasi C+D (voce + arrivo) in PR aperta. Prossimo: validare PR voce/arrivo, poi Fase 1 strict — Supabase + auth + persistence.
 
 Vedi [`HANDOFF.md`](./HANDOFF.md) per il punto di apertura sessione e [`docs/ROADMAP.md`](./docs/ROADMAP.md) per le fasi.
 
@@ -66,9 +66,9 @@ Su Vercel: Settings → Environment Variables → aggiungi `NEXT_PUBLIC_ORS_TOKE
 │   │   ├── nav/                # Header, BottomNav, HamburgerDrawer, NavigationOverlay
 │   │   └── ui/                 # Card, Chip, SectionLabel, Stat
 │   ├── features/
-│   │   ├── io/                 # IO pillar (Home, Mappa, Registra, Garage)
+│   │   ├── io/                 # IO pillar (Home, Mappa, Feed, Garage)
 │   │   ├── gruppo/             # GRUPPO pillar (Home, Pianifica, Cordata, Storia, Diario)
-│   │   ├── mondo/              # MONDO pillar (Feed, Eventi, Classifica)
+│   │   ├── mondo/              # Drawer destinations (Eventi, Classifica) — vecchio nome dir
 │   │   └── profilo/            # Profilo (drawer destination)
 │   ├── mocks/                  # In-memory DB
 │   │   ├── rng.ts              # PRNG mulberry32
@@ -116,17 +116,18 @@ Letti **in quest'ordine** per orientarsi:
 
 ---
 
-## Architettura UI: 3 pillars
+## Architettura UI: 2 pillars
 
-L'app è organizzata in 3 pillars mutuamente esclusivi nella bottom nav:
+L'app è organizzata in 2 pillars mutuamente esclusivi nella bottom nav, con toggle compatto nell'Header:
 
-- **IO** (personale, accent `#ff6a1f`) — Home · Mappa · Registra · Garage
+- **IO** (personale, accent `#ff6a1f`) — Home · Mappa · Feed · Garage
 - **GRUPPO** (accent = colore del gruppo attivo) — Gruppo · Pianifica · Cordata · Storia · Diario
-- **MONDO** (community, accent `#6bb0ff`) — Feed · Eventi · Classifica
 
 Più zone fuori bottom nav:
-- **Drawer hamburger** (top-left): Profilo, Impostazioni, Privacy
-- **Fullscreen overlay** (on-demand): Navigation/Tracking/Cordata live
+- **Drawer hamburger** (top-left): Profilo · Eventi · Classifica · Impostazioni · Privacy
+- **Fullscreen overlay** (on-demand): Navigation / Tracking / Cordata live, VehiclePickerOverlay, GroupPickerOverlay, GarageDetailModal
+
+> Nota storica: il pillar MONDO è stato sciolto. Feed è diventato la 3ª tab del pillar IO; Eventi e Classifica vivono nel drawer. La dir `src/features/mondo/` conserva il vecchio nome ma ospita solo destinazioni del drawer.
 
 Dettagli completi in [`docs/spec/00_overview.md`](./docs/spec/00_overview.md).
 
@@ -148,7 +149,7 @@ Conventional Commits. Tipi usati:
 
 ### Branch
 
-`main` è la branch di lavoro. **Push diretti su `main`** sono ok in Fase 0 (siamo in 1 + Claude). Quando ci uniranno altri sviluppatori, valuteremo branch protection.
+Feature work su branch `feat/<area-cosa>` o `fix/<area-cosa>`. PR draft → ready quando build verde + Preview Vercel testato. Squash merge su `main` quando Ray approva su Preview. `main` deploya automaticamente su Vercel.
 
 ### Codice
 
